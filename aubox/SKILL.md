@@ -43,9 +43,8 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 │   └── perso/         # Projets personnels
 ├── services/          # Services Docker permanents
 │   └── databases/     # Stack PostgreSQL, MySQL, Redis
-├── scripts/           # Scripts d'administration hôte (ex: maintenance.sh)
+├── scripts/           # Scripts d'administration hôte (maintenance.sh, wake-ds716.sh)
 ├── skills/            # Compétences IA partagées (dépôt Git GitHub)
-├── agents/            # Configurations d'agents spécialisés (ex: devbox)
 ├── .codex/            # Configuration et règles Codex CLI
 ├── .gemini/           # Configuration Antigravity (AGY)
 ├── .claude/           # Configuration Claude Code
@@ -57,9 +56,8 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 > **Symlinks IA unifiés** :
 > - `~/.codex/skills` -> `/home/rafache/skills`
 > - `~/.gemini/config/skills` -> `/home/rafache/skills`
-> - `~/.gemini/config/agents` -> `/home/rafache/agents`
 >
-> Tout skill ajouté dans `~/skills/` ou agent dans `~/agents/` est immédiatement accessible pour tous les agents.
+> Tout skill ajouté dans `~/skills/` est immédiatement accessible pour tous les agents.
 
 ---
 
