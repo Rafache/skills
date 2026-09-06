@@ -24,7 +24,6 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
   - Interface 2,5 GbE secondaire : `enp3s0` (inactive par défaut)
   - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement
   - Wake-on-LAN : Actif sur `eno1` via `wol.service` (MAC : `84:47:09:76:d9:3f`), réveillable depuis Freebox OS
-  - Résolution locale : `aubox.local` via `avahi-daemon`
 - **NAS Synology DS716+** :
   - IP LAN : `192.168.1.20` (MAC : `00:11:32:55:14:08`, Wake-on-LAN supporté)
   - Montages NFSv4 automount systemd (fstab `_netdev,nofail,x-systemd.automount`) :
