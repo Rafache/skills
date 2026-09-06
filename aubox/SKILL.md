@@ -20,12 +20,12 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 - **OS** : Debian GNU/Linux 13 (Trixie) amd64, kernel 6.12, 100% headless (pas d'environnement de bureau)
 - **Utilisateur principal** : `rafache` (avec privilèges sudo)
 - **Réseau** :
-  - Interface Ethernet principale : `eno1` (2,5 Gb/s), IP LAN DHCP réservée Freebox (`192.168.1.32`)
+  - Interface Ethernet principale : `eno1` (2,5 Gb/s), IP LAN DHCP réservée Freebox (`192.168.1.10`)
   - Interface 2,5 GbE secondaire : `enp3s0` (inactive par défaut)
-  - VPN Mesh : Tailscale actif (`100.127.111.77`, alias `aubox`)
-  - Résiculation locale : `aubox.local` via `avahi-daemon`
+  - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement
+  - Résolution locale : `aubox.local` via `avahi-daemon`
 - **NAS Synology DS716+** :
-  - IP LAN : `192.168.1.126` (Tailscale : `100.104.61.61`)
+  - IP LAN : `192.168.1.126`
   - Montages NFSv4 automount systemd (fstab `_netdev,nofail,x-systemd.automount`) :
     - `/mnt/ds716/video` -> `/volume1/video`
     - `/mnt/ds716/music` -> `/volume1/music`
@@ -85,8 +85,8 @@ Contient le `compose.yaml` des 3 bases de données principales :
 
 ### Règles de sécurité Docker & Ports
 1. **Liaison IP stricte** :
-   - Les ports des bases ne sont **JAMAIS** bindés sur `0.0.0.0` ni sur le LAN direct.
-   - Ils sont liés **uniquement à l'IP Tailscale** (`100.127.111.77:5432`, `100.127.111.77:3306`, `100.127.111.77:6379`).
+   - Les ports des bases ne sont **JAMAIS** bindés sur `0.0.0.0` (accessible sur tous les réseaux).
+   - Ils sont liés à l'IP LAN locale **`192.168.1.10`** (`192.168.1.10:5432`, `192.168.1.10:3306`, `192.168.1.10:6379`), ce qui permet d'y accéder depuis le réseau local ou à distance en se connectant au VPN Freebox.
 2. **Communication inter-conteneurs** :
    - Toujours brancher les nouveaux conteneurs sur le réseau externe `aubox`.
    - Utiliser les alias réseau directs : `DB_HOST=postgres`, `DB_HOST=mysql`, `REDIS_HOST=redis`.
@@ -129,7 +129,7 @@ Pour préserver l'intégrité de l'AuBox, **les règles suivantes sont absolues*
    - ❌ `rm -rf /` ou `rm -rf ~/...` sur des dossiers projets ou données.
 3. **Exposition réseau non sécurisée** :
    - ❌ Ne jamais mapper de ports de services sensibles ou de bases de données sur `0.0.0.0`.
-   - ✅ Utiliser `127.0.0.1` pour le local ou l'IP Tailscale `100.127.111.77` pour l'accès réseau privé.
+   - ✅ Utiliser `127.0.0.1` pour le local ou l'IP locale `192.168.1.10` pour l'accès privé via LAN ou VPN Freebox.
 4. **Git destructif** :
    - ❌ `git reset --hard` ou `git clean -fd` sans demande formelle.
    - ❌ `git push --force` sur les branches principales.
@@ -151,10 +151,10 @@ Pour préserver l'intégrité de l'AuBox, **les règles suivantes sont absolues*
        aubox:
          external: true
      ```
-   - Lier les ports externes à l'IP Tailscale si accès distant nécessaire :
+   - Lier les ports externes à l'IP locale si accès LAN/VPN nécessaire :
      ```yaml
      ports:
-       - "100.127.111.77:PORT_HOTE:PORT_CONTAINER"
+       - "192.168.1.10:PORT_HOTE:PORT_CONTAINER"
      ```
 3. Stocker les secrets dans un fichier local `.env` (permissions `chmod 600 .env`).
 4. Démarrer avec :
@@ -196,8 +196,8 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 # Espace disque hôte et montages Synology
 df -h / /mnt/ds716/*
 
-# Statut du réseau privé Tailscale
-tailscale status
+# Statut des interfaces réseau et adresses IP
+ip -br a
 
 # Températures et ventilation
 sensors
