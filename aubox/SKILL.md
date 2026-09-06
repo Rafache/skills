@@ -25,7 +25,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
   - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement
   - Résolution locale : `aubox.local` via `avahi-daemon`
 - **NAS Synology DS716+** :
-  - IP LAN : `192.168.1.126`
+  - IP LAN : `192.168.1.20`
   - Montages NFSv4 automount systemd (fstab `_netdev,nofail,x-systemd.automount`) :
     - `/mnt/ds716/video` -> `/volume1/video`
     - `/mnt/ds716/music` -> `/volume1/music`
