@@ -31,7 +31,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
     - `/mnt/ds716/video` -> `/volume1/video`
     - `/mnt/ds716/music` -> `/volume1/music`
     - `/mnt/ds716/backup` -> `/volume1/backup`
-  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`).
+  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`), avec réveil automatique par Wake-on-LAN (`wake-ds716.sh`) si le NAS est éteint.
 
 ---
 
