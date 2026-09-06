@@ -96,7 +96,8 @@ Contient le `compose.yaml` des 3 bases de données principales :
    - Le NAS `/mnt/ds716/backup` sert uniquement aux dumps et sauvegardes froides, jamais au stockage direct des moteurs de base de données.
 4. **Politique de redémarrage (`restart`)** :
    - **Services permanents** (`~/services/`) : `restart: unless-stopped` (redémarrent au boot de l'hôte).
-   - **Projets de développement** (`~/projets/`) : **`restart: "no"`** (ne doivent **JAMAIS** démarrer automatiquement au boot de la machine).
+   - **Projets de développement** (`~/projets/`) : **`restart: "no"`** (ne doivent **JAMAIS** démarrer automatiquement au boot).
+   - *Bonne pratique Git* : Ne jamais modifier les `docker-compose.yml` versionnés des dépôts de code ; appliquer systématiquement les surcharges locales via un fichier **`docker-compose.override.yml`** (ou `compose.override.yml`).
 
 ---
 
