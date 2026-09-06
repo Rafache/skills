@@ -94,6 +94,9 @@ Contient le `compose.yaml` des 3 bases de données principales :
 3. **Persistance des données** :
    - Les données des bases restent **exclusivement sur le NVMe local** via les volumes nommés (`aubox_postgres_data`, `aubox_mysql_data`, `aubox_redis_data`).
    - Le NAS `/mnt/ds716/backup` sert uniquement aux dumps et sauvegardes froides, jamais au stockage direct des moteurs de base de données.
+4. **Politique de redémarrage (`restart`)** :
+   - **Services permanents** (`~/services/`) : `restart: unless-stopped` (redémarrent au boot de l'hôte).
+   - **Projets de développement** (`~/projets/`) : **`restart: "no"`** (ne doivent **JAMAIS** démarrer automatiquement au boot de la machine).
 
 ---
 
