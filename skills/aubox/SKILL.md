@@ -30,7 +30,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
     - `/mnt/ds716/video` -> `/volume1/video`
     - `/mnt/ds716/music` -> `/volume1/music`
     - `/mnt/ds716/backup` -> `/volume1/backup`
-  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`), avec réveil automatique par Wake-on-LAN (`wake-ds716.sh`) si le NAS est éteint.
+  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`). Si le NAS est éteint, il doit être réveillé manuellement (via l'application Freebox) avant d'accéder aux partages.
 
 ---
 
@@ -42,8 +42,9 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 │   ├── bayard/        # Projets professionnels Bayard
 │   └── perso/         # Projets personnels
 ├── services/          # Services Docker permanents
-│   └── databases/     # Stack PostgreSQL, MySQL, Redis
-├── scripts/           # Scripts d'administration hôte (maintenance.sh, wake-ds716.sh)
+│   ├── databases/     # Stack PostgreSQL, MySQL, Redis
+│   └── proxy/         # Reverse proxy Nginx Proxy Manager (80, 443, 81)
+├── scripts/           # Scripts d'administration hôte (maintenance.sh)
 ├── .config/
 │   └── agents/        # Dépôt centralisé des agents et skills (github.com/Rafache/skills.git)
 │       ├── agents/    # Configuration unique (AGENTS.md)
@@ -90,6 +91,31 @@ Contient le `compose.yaml` des 3 bases de données principales :
 - **PostgreSQL 18** (`postgres:18`)
 - **MySQL 8.4** (`mysql:8.4`)
 - **Redis 8** (`redis:8-alpine`) avec persistance AOF et mot de passe
+
+### Stack permanente : `~/services/proxy/`
+Reverse proxy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager:latest`) assurant la terminaison SSL/TLS, la gestion des certificats Let's Encrypt par challenge DNS Cloudflare et le routage des sous-domaines :
+- **Ports liés** : `192.168.1.10:80` (HTTP), `192.168.1.10:443` (HTTPS), `192.168.1.10:81` (Admin).
+- **Prérequis système** : `net.ipv4.ip_unprivileged_port_start=80` configuré dans `/etc/sysctl.d/99-rootless-ports.conf` pour autoriser l'écoute sur les ports privilégiés 80 et 443 en Docker rootless.
+- **Réseau** : rattaché au bridge externe `aubox`.
+- **Certificats Let's Encrypt Wildcard** (automatisés via API Cloudflare) :
+  - `*.aubox.chem1.fr`, `aubox.chem1.fr` (services locaux et projets perso)
+  - `*.prions.aubox.chem1.fr`, `prions.aubox.chem1.fr` (projets Bayard Prions en Église)
+- **WebSockets / Hot Module Replacement (HMR)** : WebSockets activés sur tous les proxy hosts. Les serveurs de dev Vite (`vite.config.ts`) spécifient `server.hmr.clientPort: 443` pour que le client distant se connecte directement au port 443 du reverse proxy.
+
+### Cartographie des domaines & routage
+
+| Domaine | Type | Cible locale | Description |
+|---|---|---|---|
+| `proxy.aubox.chem1.fr` | Docker (permanent) | `192.168.1.10:81` | Interface d'administration NPM |
+| `nas.aubox.chem1.fr` | Hôte LAN | `192.168.1.20:5000` | Synology DSM |
+| `cki.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5173` | Annuaires ressources DTDD |
+| `kapa6t.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5174` | Capacité / planning |
+| `keskifon.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5175` | KesKiFon |
+| `kestafay.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5176` | KesTaFay |
+| `trading.aubox.chem1.fr` | Dev Wrangler | `192.168.1.10:5177` | CAC Pilot dashboard |
+| `pape-france.prions.aubox.chem1.fr` | Dev Eleventy | `192.168.1.10:8085` | Mini-site Pape France |
+| `api-v2.prions.aubox.chem1.fr` | Docker (projet) | `192.168.1.10:8082` | API Symfony v2 (Nginx + PHP 8.3) |
+| `www.prions.aubox.chem1.fr` | Docker (projet) | `192.168.1.10:8084` | WordPress Prions en Église |
 
 ### Règles de sécurité Docker & Ports
 1. **Liaison IP stricte** :
