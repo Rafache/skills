@@ -5,7 +5,7 @@
 # Contributions & Outils distants
 - **Validation préalable** : Tout texte destiné à être envoyé, publié ou enregistré dans un outil distant doit être présenté pour validation avant envoi.
 - **Résultat final** : Décrire uniquement le résultat final dans les contenus persistants (commits, PR/MR, tickets, docs, code). Aucun historique d'essais ou de cheminement (sauf besoin d'audit/sécurité).
-- **Commits Git** : Uniquement un titre sur une seule ligne (*conventional commit*, en anglais, en anglais), sans corps ni description.
+- **Commits Git** : Uniquement un titre sur une seule ligne (*conventional commit*, en anglais), sans corps ni description.
 - **Signature IA** : Ne jamais mentionner « généré avec une IA », ni signature ou co-auteur IA.
 
 # Environnement local (AuBox)
