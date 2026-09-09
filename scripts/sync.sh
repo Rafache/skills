@@ -14,8 +14,8 @@ done
 
 # Agents globaux
 mkdir -p ~/.codex ~/.claude ~/.gemini
-ln -sf "$ROOT/agents/CODEX.md"  ~/.codex/AGENTS.md
-ln -sf "$ROOT/agents/CLAUDE.md" ~/.claude/CLAUDE.md
-ln -sf "$ROOT/agents/GEMINI.md" ~/.gemini/GEMINI.md
+ln -sf "$ROOT/agents/AGENTS.md" ~/.codex/AGENTS.md
+ln -sf "$ROOT/agents/AGENTS.md" ~/.claude/CLAUDE.md
+ln -sf "$ROOT/agents/AGENTS.md" ~/.gemini/GEMINI.md
 
 echo "Synchronisation terminée."

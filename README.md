@@ -6,10 +6,8 @@ Dépôt centralisant les compétences (*skills*) et instructions d'agents pour *
 
 ```text
 IA/
-├── agents/                  # Instructions globales et personnalisées
-│   ├── CODEX.md             # Instructions globales pour Codex CLI (~/.codex/AGENTS.md)
-│   ├── CLAUDE.md            # Instructions globales pour Claude Code (~/.claude/CLAUDE.md)
-│   └── GEMINI.md            # Instructions globales pour Gemini (~/.gemini/GEMINI.md)
+├── agents/                  # Configuration globale unique
+│   └── AGENTS.md            # Source unique pour tous les agents
 ├── skills/                  # Compétences / workflows spécialisés
 │   ├── aubox/
 │   │   └── SKILL.md
@@ -27,3 +25,8 @@ Pour déployer / mettre à jour les liens symboliques :
 ```bash
 ./scripts/sync.sh
 ```
+
+Les liens créés pour les agents globaux sont :
+- `~/.codex/AGENTS.md` -> `agents/AGENTS.md`
+- `~/.claude/CLAUDE.md` -> `agents/AGENTS.md`
+- `~/.gemini/GEMINI.md` -> `agents/AGENTS.md`
