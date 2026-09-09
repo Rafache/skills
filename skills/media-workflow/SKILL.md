@@ -7,6 +7,19 @@ description: Recherche des torrents via Magnetz, télécharge un magnet avec ari
 
 Ce skill est volontairement modulaire. Ne lance que les étapes demandées par l'utilisateur.
 
+## Rôle de l'Agent : Orchestrateur
+
+L'agent agit en chef d'orchestre du workflow :
+- **Interdiction formelle de créer des scripts Python ad-hoc / à la volée** : Ne jamais écrire de wrapper `.py`, de watcher ou de script temporaire.
+- **Utiliser exclusivement les scripts connus** du dossier `scripts/` (`search.sh`, `download.sh`, `probe.sh`, `optimize.sh`) et les commandes standard (`mkdir -p`, `mv`).
+- **Exécution 1 par 1 en tâche de fond** :
+  - Lancer les tâches longues (téléchargement `download.sh`, encodage `optimize.sh`) **en tâche de fond** (background task) **séquentiellement, une par une**.
+  - Ne jamais exécuter plusieurs tâches lourdes en parallèle (préserve CPU, I/O et bande passante).
+- **Supervision & Feedback continu** :
+  - Annoncer le plan : étape en cours (ex : *Téléchargement*) et étapes à venir (ex : *Analyse → Encodage → Renommage → Rangement*).
+  - Suivre l'avancement de la tâche de fond en direct (vérifier les logs/statuts).
+  - À la complétion d'une tâche, analyser le résultat (`DOWNLOAD_SUMMARY` ou `OPTIMIZE_SUMMARY`, code retour, taille), donner un feedback synthétique à l'utilisateur, puis lancer l'étape suivante.
+
 ## Actions disponibles
 
 1. `search` — rechercher des torrents.
@@ -108,21 +121,37 @@ L'analyse peut être demandée seule. Dans ce cas, ne pas encoder, renommer ou d
 
 # 4. Optimisation x265
 
-Si l'utilisateur demande explicitement d'optimiser/réencoder le fichier, ou demande un pipeline complet, construire puis exécuter une commande ffmpeg adaptée.
+Utiliser le script connu :
 
-Avant l'encodage, utiliser ffprobe si les informations nécessaires ne sont pas déjà connues.
+```bash
+scripts/optimize.sh [options] '<fichier_source>' ['<fichier_destination>']
+```
+
+Options disponibles :
+- `-a, --audio <copy|eac3|aac>` : Codec audio (défaut : `copy`).
+  - **`eac3` (recommandé)** : Convertit en Dolby Digital Plus (640k). À utiliser pour les pistes sans perte ou peu compatibles comme le **DTS, DTS-HD, TrueHD** (gain de 2 à 4 Go par film, compatibilité universelle Direct Play sur TV/Apple TV).
+  - `aac` : Encodage AAC (384k).
+  - `copy` : Recopie sans réencodage (pour pistes déjà en EAC3, AC3, AAC).
+- `-c, --crf <int>` : CRF vidéo x265 (défaut : `22`).
+- `-p, --preset <nom>` : Preset x265 (défaut : `medium`).
+
+À lancer obligatoirement en **tâche de fond** (background task).
+
+Avant l'encodage, inspecter le fichier via `scripts/probe.sh` pour déterminer les codecs vidéo et audio.
 
 Politique par défaut :
-- vidéo : `libx265`;
-- `-preset medium`;
-- `-crf 22`;
+- vidéo : `libx265`, `-preset medium`, `-crf 22` ;
+- audio : `copy` par défaut, ou `-a eac3` si DTS / DTS-HD / TrueHD détecté ou sur demande ;
 - conserver résolution et framerate ;
-- conserver métadonnées et chapitres lorsque possible ;
-- copier les pistes audio sans réencodage ;
-- conserver uniquement les pistes audio françaises et anglaises ;
-- conserver uniquement les sous-titres français et les pistes `forced` ;
-- produire un MKV ;
-- ne jamais écraser le fichier source.
+- conserver métadonnées et chapitres ;
+- copier les sous-titres sans réencodage ;
+- produire un conteneur MKV ;
+- interdiction stricte d'écraser le fichier source.
+
+Le script renvoie en fin d'exécution :
+```text
+OPTIMIZE_SUMMARY|duration_seconds=<secondes>|exit_code=<code>|audio_codec=<codec>|output=<fichier>
+```
 
 Ne pas réencoder mécaniquement :
 - si la vidéo est déjà HEVC/x265 ou AV1, signaler que le gain est probablement faible ;
@@ -224,7 +253,9 @@ Ne jamais supprimer automatiquement le fichier source d'un réencodage. Si un fi
 
 # Principes
 
-- Les scripts sont des primitives simples ; l'agent garde la logique.
+- **Zéro script Python jetable** : L'agent s'interdit d'écrire du code Python ad-hoc et s'appuie sur les scripts connus du dossier `scripts/`.
+- **Orchestration séquentielle** : Les tâches lourdes s'exécutent 1 par 1 en tâche de fond avec feedback continu.
+- Les scripts sont des primitives simples ; l'agent garde le rôle d'orchestrateur.
 - Chaque action peut être utilisée indépendamment.
 - N'enchaîner que les actions demandées ou clairement impliquées.
 - Ne pas modifier les permissions du NAS.
