@@ -5,7 +5,7 @@ Dépôt centralisant les compétences (*skills*) et instructions d'agents pour *
 ## Structure
 
 ```text
-IA/
+agents/
 ├── agents/                  # Configuration globale unique
 │   └── AGENTS.md            # Source unique pour tous les agents
 ├── skills/                  # Compétences / workflows spécialisés
