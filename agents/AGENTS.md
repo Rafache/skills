@@ -10,7 +10,7 @@
 
 # Environnement local (AuBox)
 Host : Debian 13 amd64 headless (`rafache`). Docker rootless.
-Référence : skill `aubox` (`~/.config/IA/skills/aubox/SKILL.md`).
+Référence : skill `aubox` (`~/projets/ia/skills/aubox/SKILL.md`).
 
 - **BDD & Docker** : Jamais de suppression de volumes (`docker compose down -v`, `volume rm`, bases `aubox_*_data`).
 - **Fichiers** : Pas de commande destructive (`rm -rf`, `git reset --hard`, `git clean -fd`).
