@@ -2,17 +2,23 @@
 - Rester concis, professionnel et directement compréhensible.
 - Privilégier des phrases courtes et éviter les explications inutiles.
 
+# Méthode de travail & Qualité
+- **Exploration** : Ne pas lancer de scans exhaustifs de l'hôte (`find /`, diagnostics globaux). Consulter en priorité le skill `aubox`.
+- **Édition** : Préférer des modifications chirurgicales, préserver les commentaires existants et ne pas reformater des fichiers entiers sans demande.
+- **Validation technique** : Toujours vérifier la syntaxe, les builds ou le statut des services après modification avant de clore la tâche.
+
 # Contributions & Outils distants
 - **Validation préalable** : Tout texte destiné à être envoyé, publié ou enregistré dans un outil distant doit être présenté pour validation avant envoi.
-- **Résultat final** : Décrire uniquement le résultat final dans les contenus persistants (commits, PR/MR, tickets, docs, code). Aucun historique d'essais ou de cheminement (sauf besoin d'audit/sécurité).
-- **Commits Git** : Uniquement un titre sur une seule ligne (*conventional commit*, en anglais), sans corps ni description.
+- **Résultat final** : Décrire uniquement le résultat final dans les contenus persistants (commits, PR/MR, tickets, docs, code).
+- **Commits Git** : Ne jamais committer sans demande explicite de l'utilisateur. Découper ou amender en plusieurs commits si plusieurs sujets distincts sont traités. Titre uniquement sur une seule ligne (*conventional commit*, en anglais), sans corps ni description.
 - **Signature IA** : Ne jamais mentionner « généré avec une IA », ni signature ou co-auteur IA.
 
 # Environnement local (AuBox)
 Host : Debian 13 amd64 headless (`rafache`). Docker rootless.
 Référence : skill `aubox` (`~/.config/agents/skills/aubox/SKILL.md`).
 
-- **BDD & Docker** : Jamais de suppression de volumes (`docker compose down -v`, `volume rm`, bases `aubox_*_data`).
+- **Docker** : Toujours utiliser `export DOCKER_HOST=unix:///run/user/1000/docker.sock`. Jamais de suppression de volumes (`docker compose down -v`, `volume rm`, bases `aubox_*_data`).
+- **Tooling** : Python via `uv`/`uvx`, Node via `nvm` (`npm`/`npx`, Node 24+). Ne jamais installer de runtimes via `apt`.
 - **Fichiers** : Pas de commande destructive (`rm -rf`, `git reset --hard`, `git clean -fd`).
 - **Réseau** : Jamais de port mappé sur `0.0.0.0` (uniquement `127.0.0.1` ou `192.168.1.10`).
 - **Secrets** : Ne jamais afficher ni committer de clés SSH, tokens ou fichiers `.env`.
