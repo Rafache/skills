@@ -17,7 +17,7 @@
 Host : Debian 13 amd64 headless (`rafache`). Docker rootless.
 Référence : skill `aubox` (`~/.config/agents/skills/aubox/SKILL.md`).
 
-- **Docker** : Toujours utiliser `export DOCKER_HOST=unix:///run/user/1000/docker.sock`. Jamais de suppression de volumes (`docker compose down -v`, `volume rm`, bases `aubox_*_data`).
+- **Docker** : Jamais de suppression de volumes (`docker compose down -v`, `volume rm`, bases `aubox_*_data`).
 - **Tooling** : Python via `uv`/`uvx`, Node via `nvm` (`npm`/`npx`, Node 24+). Ne jamais installer de runtimes via `apt`.
 - **Fichiers** : Pas de commande destructive (`rm -rf`, `git reset --hard`, `git clean -fd`).
 - **Réseau** : Jamais de port mappé sur `0.0.0.0` (uniquement `127.0.0.1` ou `192.168.1.10`).

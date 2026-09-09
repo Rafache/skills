@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Skills
-for dir in ~/.codex/skills ~/.claude/skills ~/.gemini/antigravity-cli/skills; do
+for dir in ~/.codex/skills ~/.claude/skills ~/.gemini/antigravity-cli/skills ~/.gemini/config/skills; do
   [ -L "$dir" ] && rm "$dir"
   mkdir -p "$dir"
   for s in "$ROOT"/skills/*; do
