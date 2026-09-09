@@ -44,7 +44,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 ├── services/          # Services Docker permanents
 │   ├── databases/     # Stack PostgreSQL, MySQL, Redis
 │   └── proxy/         # Reverse proxy Nginx Proxy Manager (80, 443, 81)
-├── scripts/           # Scripts d'administration hôte (maintenance.sh)
+├── scripts/           # Scripts d'administration hôte (maintenance.sh, backup.sh, restore.sh)
 ├── .config/
 │   └── agents/        # Dépôt centralisé des agents et skills (github.com/Rafache/skills.git)
 │       ├── agents/    # Configuration unique (AGENTS.md)
@@ -95,7 +95,7 @@ Contient le `compose.yaml` des 3 bases de données principales :
 ### Stack permanente : `~/services/proxy/`
 Reverse proxy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager:latest`) assurant la terminaison SSL/TLS, la gestion des certificats Let's Encrypt par challenge DNS Cloudflare et le routage des sous-domaines :
 - **Ports liés** : `192.168.1.10:80` (HTTP), `192.168.1.10:443` (HTTPS), `192.168.1.10:81` (Admin).
-- **Prérequis système** : `net.ipv4.ip_unprivileged_port_start=80` configuré dans `/etc/sysctl.d/99-rootless-ports.conf` pour autoriser l'écoute sur les ports privilégiés 80 et 443 en Docker rootless.
+- **Prérequis système** : `net.ipv4.ip_unprivileged_port_start=80` configuré dans `/etc/sysctl.d/50-rootless-ports.conf` pour autoriser l'écoute sur les ports privilégiés 80 et 443 en Docker rootless.
 - **Réseau** : rattaché au bridge externe `aubox`.
 - **Certificats Let's Encrypt Wildcard** (automatisés via API Cloudflare) :
   - `*.aubox.chem1.fr`, `aubox.chem1.fr` (services locaux et projets perso)
@@ -219,6 +219,21 @@ sudo apt autoclean
 docker system prune -f
 ```
 *(Le nettoyage Docker avec `-f` nettoie les conteneurs éteints et caches, mais préserve scrupuleusement les volumes de données).*
+
+### D. Sauvegarde et Restauration (NAS Synology)
+Les scripts officiels dans `~/scripts/` gèrent les sauvegardes vers `/mnt/ds716/backup/aubox/` :
+
+- **Sauvegarder** :
+  ```bash
+  ~/scripts/backup.sh
+  ```
+  Exporte à chaud les bases (PostgreSQL, MySQL, Redis), les volumes Nginx Proxy Manager, les services permanents (`~/services`), les configurations locales des projets (`.env*`, `compose.override.yml`), les configurations systemd user (`~/.config/systemd/user`) et les clés SSH/dotfiles. Met à jour le lien `latest` et applique une rotation automatique (8 dernières sauvegardes conservées).
+
+- **Restaurer** :
+  ```bash
+  ~/scripts/restore.sh [/mnt/ds716/backup/aubox/YYYY-MM-DD_HHMMSS]
+  ```
+  Restaure l'intégralité de l'environnement (clés, dotfiles, services Docker, volumes NPM, bases de données et configs projets) en quelques minutes. Par défaut, cible la sauvegarde `latest`.
 
 ---
 
