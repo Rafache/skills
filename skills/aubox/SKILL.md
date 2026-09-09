@@ -44,8 +44,12 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 ├── services/          # Services Docker permanents
 │   └── databases/     # Stack PostgreSQL, MySQL, Redis
 ├── scripts/           # Scripts d'administration hôte (maintenance.sh, wake-ds716.sh)
-├── skills/            # Compétences IA partagées (dépôt Git GitHub)
-├── .codex/            # Configuration et règles Codex CLI
+├── .config/
+│   └── agents/        # Dépôt centralisé des agents et skills (github.com/Rafache/skills.git)
+│       ├── agents/    # Configuration unique (AGENTS.md)
+│       ├── skills/    # Compétences partagées (aubox, media-workflow, ...)
+│       └── scripts/   # Script de synchronisation (sync.sh)
+├── .codex/            # Configuration Codex CLI
 ├── .gemini/           # Configuration Antigravity (AGY)
 ├── .claude/           # Configuration Claude Code
 ├── .docker/           # Config client Docker rootless
@@ -53,11 +57,17 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 └── .local/bin/        # Outils CLI locaux (uv, uvx, codex, agy)
 ```
 
-> **Symlinks IA unifiés** :
-> - `~/.codex/skills` -> `/home/rafache/skills`
-> - `~/.gemini/config/skills` -> `/home/rafache/skills`
+> **Symlinks IA unifiés** (déployés via `~/.config/agents/scripts/sync.sh`) :
+> - **Configuration commune** :
+>   - `~/.codex/AGENTS.md` -> `~/.config/agents/agents/AGENTS.md`
+>   - `~/.claude/CLAUDE.md` -> `~/.config/agents/agents/AGENTS.md`
+>   - `~/.gemini/GEMINI.md` -> `~/.config/agents/agents/AGENTS.md`
+> - **Skills partagés** :
+>   - `~/.codex/skills/*` -> `~/.config/agents/skills/*`
+>   - `~/.claude/skills/*` -> `~/.config/agents/skills/*`
+>   - `~/.gemini/antigravity-cli/skills/*` -> `~/.config/agents/skills/*`
 >
-> Tout skill ajouté dans `~/skills/` est immédiatement accessible pour tous les agents.
+> Tout skill ou règle ajouté dans `~/.config/agents/` est synchronisé pour tous les agents via `./scripts/sync.sh`.
 
 ---
 
