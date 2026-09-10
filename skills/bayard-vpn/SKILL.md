@@ -23,7 +23,7 @@ Ce skill décrit comment piloter le tunnel VPN d'entreprise Bayard depuis l'AuBo
 
 ## 2. Commandes CLI
 
-Le script officiel est situé dans `/home/rafache/scripts/bayard-vpn.sh` (accessible directement via `bayard-vpn`) :
+Le script officiel est packagé dans le skill : `scripts/bayard-vpn.sh` (également accessible globalement via la commande `bayard-vpn`) :
 
 ```bash
 # Vérifier si le tunnel est actif et si les sites internes répondent
