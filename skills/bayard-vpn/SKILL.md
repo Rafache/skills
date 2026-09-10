@@ -63,13 +63,13 @@ Certains sites d'entreprise ou préprods (ex: `*.prionseneglise.fr`, `*.intranet
 
 1. **Ne jamais utiliser `curl -I` (HEAD)** :
    CloudFront intercepte les requêtes `HEAD` brutes et renvoie une fausse erreur `404` ou `403`. Toujours effectuer des requêtes `GET`.
-2. **Fournir un User-Agent navigateur avec curl et forcer IPv4** :
-   Le WAF bloque les requêtes avec le User-Agent `curl/...` par défaut. Utiliser systématiquement un User-Agent réaliste et le drapeau `-4` (le tunnel VPN étant strictement IPv4) :
+2. **Fournir un User-Agent navigateur réaliste** :
+   Le WAF bloque les requêtes avec le User-Agent `curl/...` ou le mot-clé `HeadlessChrome`. L'IPv4 est prioritaire à l'échelle du système (`/etc/gai.conf`). Utiliser systématiquement un User-Agent réaliste :
    ```bash
-   curl -4 -s -L -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36" <URL>
+   curl -s -L -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36" <URL>
    ```
-3. **Privilégier Google Chrome headless (Chrome DevTools MCP)** :
-   Pour tester une page ou vérifier le rendu d'un site, utiliser prioritairement Chrome DevTools MCP. Il transmet nativement les en-têtes réels d'un navigateur moderne, exécute le JavaScript et n'est jamais filtré par les règles anti-bot du WAF.
+3. **Privilégier Google Chrome (Chrome DevTools MCP)** :
+   Pour tester une page ou vérifier le rendu d'un site, utiliser prioritairement Chrome DevTools MCP ou Google Chrome avec un User-Agent standard (`--user-agent="..."`) pour éviter le flag `HeadlessChrome` bloqué par le WAF.
 
 ---
 
