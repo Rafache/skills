@@ -1,6 +1,6 @@
 ---
 name: aubox
-description: Référence technique, opérationnelle et garde-fous de la devbox headless AuBox (architecture, Docker rootless, Tailscale, outils, stockage NVMe/NFS, bonnes pratiques et commandes sans rescannage).
+description: Référence technique, opérationnelle et garde-fous de la devbox headless AuBox (architecture, Docker standard, Tailscale, outils, stockage NVMe/NFS, bonnes pratiques et commandes sans rescannage).
 ---
 
 # AuBox — Guide Opérationnel & Bonnes Pratiques
@@ -18,7 +18,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 - **RAM** : 16 Go DDR5 (~12 Go alloués au système, reste réservé VRAM)
 - **Stockage hôte** : SSD NVMe 512 Go (`/dev/nvme0n1p2` sur `/`)
 - **OS** : Debian GNU/Linux 13 (Trixie) amd64, kernel 6.12, 100% headless (pas d'environnement de bureau)
-- **Utilisateur principal** : `rafache` (avec privilèges sudo)
+- **Utilisateur principal** : `rafache` (avec privilèges sudo, membre du groupe `docker`)
 - **Réseau** :
   - Interface Ethernet principale : `eno1` (2,5 Gb/s), IP LAN DHCP réservée Freebox (`192.168.1.10`)
   - Interface 2,5 GbE secondaire : `enp3s0` (inactive par défaut)
@@ -53,7 +53,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 ├── .codex/            # Configuration Codex CLI
 ├── .gemini/           # Configuration Antigravity (AGY)
 ├── .claude/           # Configuration Claude Code
-├── .docker/           # Config client Docker rootless
+├── .docker/           # Config client Docker
 ├── .nvm/              # Versions Node.js gérées par NVM
 └── .local/bin/        # Outils CLI locaux (uv, uvx, codex, agy)
 ```
@@ -72,15 +72,11 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 
 ---
 
-## 3. Docker Rootless & Bases de Données
+## 3. Docker Standard & Bases de Données
 
 ### Configuration Docker
-- Docker tourne en **rootless** complet sous l'utilisateur `rafache` (linger systemd activé).
-- Socket Docker : `/run/user/1000/docker.sock`
-- Variable d'environnement à toujours utiliser :
-  ```bash
-  export DOCKER_HOST=unix:///run/user/1000/docker.sock
-  ```
+- Docker tourne en mode **standard** (daemon système `docker.service` géré par systemd, utilisateur `rafache` dans le groupe `docker`).
+- Socket Docker standard : `/var/run/docker.sock` (aucune variable `DOCKER_HOST` requise).
 - Réseau Docker partagé : **`aubox`** (bridge externe).
   ```bash
   docker network ls  # vérifier la présence du réseau 'aubox'
@@ -95,7 +91,6 @@ Contient le `compose.yaml` des 3 bases de données principales :
 ### Stack permanente : `~/services/proxy/`
 Reverse proxy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager:latest`) assurant la terminaison SSL/TLS, la gestion des certificats Let's Encrypt par challenge DNS Cloudflare et le routage des sous-domaines :
 - **Ports liés** : `192.168.1.10:80` (HTTP), `192.168.1.10:443` (HTTPS), `192.168.1.10:81` (Admin).
-- **Prérequis système** : `net.ipv4.ip_unprivileged_port_start=80` configuré dans `/etc/sysctl.d/50-rootless-ports.conf` pour autoriser l'écoute sur les ports privilégiés 80 et 443 en Docker rootless.
 - **Réseau** : rattaché au bridge externe `aubox`.
 - **Certificats Let's Encrypt Wildcard** (automatisés via API Cloudflare) :
   - `*.aubox.chem1.fr`, `aubox.chem1.fr` (services locaux et projets perso)
@@ -197,7 +192,6 @@ Pour préserver l'intégrité de l'AuBox, **les règles suivantes sont absolues*
 3. Stocker les secrets dans un fichier local `.env` (permissions `chmod 600 .env`).
 4. Démarrer avec :
    ```bash
-   export DOCKER_HOST=unix:///run/user/1000/docker.sock
    docker compose up -d
    ```
 
@@ -243,7 +237,6 @@ Pour vérifier la santé du serveur sans exécuter de longs scans :
 
 ```bash
 # État des conteneurs
-export DOCKER_HOST=unix:///run/user/1000/docker.sock
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # Espace disque hôte et montages Synology
