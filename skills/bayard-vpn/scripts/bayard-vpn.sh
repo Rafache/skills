@@ -44,8 +44,44 @@ case "${1:-status}" in
     tail -n 20 /var/log/bayard-vpn.log 2>/dev/null || echo "Aucun log."
     ;;
 
+  route)
+    DOMAIN="${2:-}"
+    if ! ip link show "${IFACE}" >/dev/null 2>&1; then
+      echo "Erreur : le VPN n'est pas connecté (${IFACE} introuvable)." >&2
+      exit 1
+    fi
+    if [ -z "${DOMAIN}" ] || ! [[ "${DOMAIN}" =~ ^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}$ ]]; then
+      echo "Erreur : seul un nom d'hôte valide est accepté (ex: preprod-pape-france.prionseneglise.fr)." >&2
+      exit 1
+    fi
+    IPS=$(getent ahostsv4 "${DOMAIN}" | awk '{print $1}' | sort -u)
+    if [ -z "${IPS}" ]; then
+      echo "Erreur : aucune adresse IPv4 résolue pour ${DOMAIN}." >&2
+      exit 1
+    fi
+    echo "Routage de ${DOMAIN} via ${IFACE} :"
+    for ip in ${IPS}; do
+      ip route replace "${ip}/32" dev "${IFACE}"
+      echo "  + ${ip}/32 -> ${IFACE}"
+    done
+    ;;
+
+  unroute)
+    DOMAIN="${2:-}"
+    if [ -z "${DOMAIN}" ] || ! [[ "${DOMAIN}" =~ ^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}$ ]]; then
+      echo "Erreur : seul un nom d'hôte valide est accepté." >&2
+      exit 1
+    fi
+    IPS=$(getent ahostsv4 "${DOMAIN}" | awk '{print $1}' | sort -u)
+    echo "Suppression des routes pour ${DOMAIN} :"
+    for ip in ${IPS}; do
+      ip route del "${ip}/32" dev "${IFACE}" 2>/dev/null || true
+      echo "  - ${ip}/32"
+    done
+    ;;
+
   *)
-    echo "Usage: bayard-vpn {start [OTP]|stop|status|logs}"
+    echo "Usage: bayard-vpn {start [OTP]|stop|status|logs|route <domaine>|unroute <domaine>}"
     exit 1
     ;;
 esac
