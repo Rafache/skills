@@ -62,21 +62,24 @@ case "${1:-status}" in
     ;;
 
   unroute)
-    DOMAIN="${2:-}"
-    if [ -z "${DOMAIN}" ] || ! [[ "${DOMAIN}" =~ ^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}$ ]]; then
-      echo "Erreur : seul un nom d'hôte valide est accepté." >&2
+    if ! ip link show "${IFACE}" >/dev/null 2>&1; then
+      echo "Erreur : le VPN n'est pas connecté (${IFACE} introuvable)." >&2
       exit 1
     fi
-    IPS=$(getent ahostsv4 "${DOMAIN}" | awk '{print $1}' | sort -u)
-    echo "Suppression des routes pour ${DOMAIN} :"
-    for ip in ${IPS}; do
-      ip route del "${ip}/32" dev "${IFACE}" 2>/dev/null || true
-      echo "  - ${ip}/32"
+    ROUTES=$(ip route show dev "${IFACE}" | awk '!/\// && !/proto kernel/ {print $1}')
+    if [ -z "${ROUTES}" ]; then
+      echo "Aucune route hôte à supprimer sur ${IFACE}."
+      exit 0
+    fi
+    echo "Suppression des routes hôtes sur ${IFACE} :"
+    for r in ${ROUTES}; do
+      ip route del "${r}" dev "${IFACE}" 2>/dev/null || true
+      echo "  - ${r}"
     done
     ;;
 
   *)
-    echo "Usage: bayard-vpn {start [OTP]|stop|status|logs|route <domaine>|unroute <domaine>}"
+    echo "Usage: bayard-vpn {start [OTP]|stop|status|logs|route <domaine>|unroute}"
     exit 1
     ;;
 esac

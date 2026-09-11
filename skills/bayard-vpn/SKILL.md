@@ -16,7 +16,7 @@ bayard-vpn status               # État (CONNECTÉ / DÉCONNECTÉ)
 bayard-vpn start <CODE_OTP>     # Connecter avec le FortiToken (6 chiffres)
 bayard-vpn stop                 # Déconnecter
 bayard-vpn route <domaine>      # Router un domaine public/préprod via l'IP Bayard
-bayard-vpn unroute <domaine>    # Retirer les routes du domaine
+bayard-vpn unroute              # Retirer les routes hôtes ajoutées
 ```
 
 **Règle Agent** : Si le statut est `DÉCONNECTÉ`, demander le code à l'utilisateur :
@@ -24,14 +24,20 @@ bayard-vpn unroute <domaine>    # Retirer les routes du domaine
 
 ## 2. Accès aux sites et préprods sous WAF CloudFront
 
-Si un site public ou une préprod renvoie une erreur 404 ou 401 liée au filtrage IP :
+Si un site public ou une préprod renvoie une erreur 404 liée au filtrage IP :
 
 ```bash
 bayard-vpn route <domaine>
 curl -4 -s -L -A "Mozilla/5.0" https://<domaine>/
-bayard-vpn unroute <domaine>   # Nettoyer après le test
+bayard-vpn unroute              # Nettoyer après le test
 ```
 *(Toujours utiliser un User-Agent standard et éviter `curl -I` que CloudFront bloque).*
+
+> [!IMPORTANT]
+> **Sur les hôtes protégés par le WAF** (préprods, `preprod-*`), forcer l'IPv4 : l'IPv6 y reçoit un faux 404. Le `-4` de `curl` et le `--host-resolver-rules` de Chrome sont obligatoires, **y compris VPN monté** — la route posée par `bayard-vpn route` est une route IPv4, et `ppp-bayard` ne porte aucune adresse IPv6. Ailleurs (prod, `abonnement.*`), rien de particulier.
+
+> [!WARNING]
+> **Ne pas marteler une préprod.** Plusieurs centaines de requêtes en quelques minutes suffisent à faire bloquer durablement une IP. Pour toute mesure répétée — audits Lighthouse, vérification d'assets — servir le build en local avec `python3 -m http.server --bind 127.0.0.1`, et ne sortir sur l'URL publique que pour des contrôles ponctuels.
 
 ## 3. Review Apps & Préprods (Basic Auth)
 
