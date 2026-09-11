@@ -35,10 +35,10 @@ bayard-vpn unroute <domaine>   # Nettoyer après le test
 
 ## 3. Review Apps & Préprods (Basic Auth)
 
-Accessibles **sans VPN** via l'authentification HTTP Basic Auth (`Bayard Restricted Area`). Identifiants stockés dans `~/.config/bayard/review-auth.env` :
+Accessibles **sans VPN** via l'authentification HTTP Basic Auth (`Bayard Restricted Area`). Identifiants stockés dans `~/.config/bayard/.env` :
 
 ```bash
-source ~/.config/bayard/review-auth.env
+source ~/.config/bayard/.env
 curl -s -L -u "${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}" <URL>
 ```
 *Via navigateur :* `https://${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}@<domaine>/`
