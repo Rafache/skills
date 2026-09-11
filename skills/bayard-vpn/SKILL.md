@@ -31,10 +31,7 @@ bayard-vpn route <domaine>
 curl -4 -s -L -A "Mozilla/5.0" https://<domaine>/
 bayard-vpn unroute              # Nettoyer après le test
 ```
-*(Toujours utiliser un User-Agent standard et éviter `curl -I` que CloudFront bloque).*
-
-> [!IMPORTANT]
-> **Sur les hôtes protégés par le WAF** (préprods, `preprod-*`), forcer l'IPv4 : l'IPv6 y reçoit un faux 404. Le `-4` de `curl` et le `--host-resolver-rules` de Chrome sont obligatoires, **y compris VPN monté** — la route posée par `bayard-vpn route` est une route IPv4, et `ppp-bayard` ne porte aucune adresse IPv6. Ailleurs (prod, `abonnement.*`), rien de particulier.
+Le drapeau `-4` et un User-Agent navigateur sont obligatoires (le tunnel est strictement IPv4 et CloudFront bloque les requêtes `HEAD` / `curl -I`).
 
 > [!WARNING]
 > **Ne pas marteler une préprod.** Plusieurs centaines de requêtes en quelques minutes suffisent à faire bloquer durablement une IP. Pour toute mesure répétée — audits Lighthouse, vérification d'assets — servir le build en local avec `python3 -m http.server --bind 127.0.0.1`, et ne sortir sur l'URL publique que pour des contrôles ponctuels.
