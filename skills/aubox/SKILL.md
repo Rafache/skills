@@ -31,7 +31,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
     - `/mnt/ds716/video` -> `/volume1/video`
     - `/mnt/ds716/music` -> `/volume1/music`
     - `/mnt/ds716/backup` -> `/volume1/backup`
-  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`). Si le NAS est éteint, il doit être réveillé manuellement (via l'application Freebox) avant d'accéder aux partages.
+  - *Règle* : Le montage s'effectue automatiquement au premier accès (`ls /mnt/ds716/...`). Si le NAS est en veille, il peut être réveillé directement via l'API Freebox (`freebox wol 00:11:32:55:14:08`), ce que `backup.sh` gère désormais de manière 100% autonome.
 
 ---
 
@@ -51,7 +51,9 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 │   │   ├── agents/    # Configuration unique (AGENTS.md)
 │   │   ├── skills/    # Compétences partagées (aubox, media-workflow, bayard-vpn)
 │   │   └── scripts/   # Script de synchronisation (sync.sh)
-│   └── bayard/        # Secrets et accès Bayard (.env en chmod 600)
+│   ├── bayard/        # Secrets et accès Bayard (.env en chmod 600)
+│   ├── freebox/       # Token et config Freebox OS (.env en chmod 600)
+│   └── .wrangler/     # Token OAuth Cloudflare Wrangler (chmod 600)
 ├── .codex/            # Configuration Codex CLI
 ├── .gemini/           # Configuration Antigravity (AGY)
 ├── .claude/           # Configuration Claude Code
@@ -68,6 +70,7 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 - Docker tourne en mode **standard** (daemon système `docker.service` géré par systemd, utilisateur `rafache` dans le groupe `docker`).
 - Socket Docker standard : `/var/run/docker.sock`.
 - Réseau Docker partagé : **`aubox`** (bridge externe).
+- Rotation des logs conteneurs : configurée dans `/etc/docker/daemon.json` (`json-file`, `max-size: 10m`, `max-file: 3`).
 
 ### Stack permanente : `~/services/databases/`
 Contient le `compose.yaml` des 3 bases de données principales :
@@ -108,6 +111,7 @@ Avant d'installer un binaire ou une dépendance, vérifier la boîte à outils e
 | Outil | Emplacement / Commande | Remarques d'utilisation |
 |---|---|---|
 | **Node / npm / npx** | `~/.nvm/current/bin/` (Node v24+) | **Ne jamais installer Node via apt**. NVM gère le runtime. |
+| **Cloudflare Wrangler** | `~/.nvm/current/bin/wrangler` | CLI officiel Cloudflare (Workers, Pages, D1, KV). Installé globalement via npm. |
 | **Python / uv / uvx** | `~/.local/bin/uv`, `uvx` | Utiliser `uv` pour les venvs/packages et `uvx` pour lancer des CLI Python isolés. |
 | **Git** | `/usr/bin/git` | Installé et configuré. |
 | **GitHub CLI** | `/usr/bin/gh` | Authentifié sur le compte `Rafache`. Gère `https://github.com/Rafache/skills.git`. |
@@ -118,6 +122,7 @@ Avant d'installer un binaire ou une dépendance, vérifier la boîte à outils e
 | **aria2c** | `/usr/bin/aria2c` | Téléchargement rapide multi-segments / magnets (utilisé par le skill `media-workflow`). |
 | **Outils système** | `sensors`, `nvme`, `smartctl`, `ethtool`, `vainfo` | Surveillance hardware et vidéo. |
 | **VPN Bayard** | `~/.local/bin/bayard-vpn` | Pilotage Fortinet SSL-VPN en split-tunneling et routage d'hôtes anti-WAF (skill `bayard-vpn`). |
+| **Freebox OS CLI** | `~/.local/bin/freebox` | Pilotage API Freebox (débit fibre, IP publique, statut hôtes, Wake-on-LAN). Secrets dans `~/.config/freebox/.env`. |
 | **Agents IA** | `codex`, `agy` (Antigravity), `claude` | Outils installés sur l'hôte. |
 
 ---
@@ -184,8 +189,9 @@ sudo apt full-upgrade -y
 sudo apt autoremove -y
 sudo apt autoclean
 docker system prune -f
+npm update -g  # Packages globaux sous NVM
 ```
-*(Le nettoyage Docker avec `-f` nettoie les conteneurs éteints et caches, mais préserve scrupuleusement les volumes de données).*
+*(Le nettoyage Docker avec `-f` nettoie les conteneurs éteints et caches, mais préserve scrupuleusement les volumes de données. Le script vérifie également l'état des démons IA et redémarre les stacks permanentes si nécessaire).*
 
 ### D. Sauvegarde et Restauration (NAS Synology)
 Les scripts officiels dans `~/scripts/` gèrent les sauvegardes vers `/mnt/ds716/backup/aubox/` :
@@ -194,7 +200,7 @@ Les scripts officiels dans `~/scripts/` gèrent les sauvegardes vers `/mnt/ds716
   ```bash
   ~/scripts/backup.sh
   ```
-  Exporte à chaud les bases (PostgreSQL, MySQL, Redis), les volumes Nginx Proxy Manager, les services permanents (`~/services`), les configurations locales des projets (`.env*`, `compose.override.yml`), les configurations systemd user (`~/.config/systemd/user`) et les clés SSH/dotfiles. Met à jour le lien `latest` et applique une rotation automatique (8 dernières sauvegardes conservées).
+  Exporte à chaud les bases (PostgreSQL, MySQL, Redis), les volumes Nginx Proxy Manager, les services permanents (`~/services`), les configurations locales des projets (`.env*`, `compose.override.yml`), les configurations systemd user (`~/.config/systemd/user`), les clés SSH/dotfiles et les configurations d'authentification CLI (`~/.config/bayard`, `~/.config/.wrangler`). Met à jour le lien `latest` et applique une rotation automatique (8 dernières sauvegardes conservées).
 
 - **Restaurer** :
   ```bash
