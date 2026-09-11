@@ -1,6 +1,6 @@
 ---
 name: bayard-vpn
-description: Pilotage du VPN d'entreprise Bayard (Fortinet SSL-VPN) en split-tunneling sur l'AuBox pour accéder aux ressources internes (*.bayard.io, *.bayardev.com, 10.0.0.0/8, 172.16.0.0/12).
+description: Pilotage du VPN d'entreprise Bayard (Fortinet SSL-VPN) en split-tunneling sur l'AuBox pour accéder aux ressources internes (*.bayard.io, *.bayardev.com, preprod.*, 10.0.0.0/8, 172.16.0.0/12).
 ---
 
 # Bayard VPN
@@ -21,9 +21,9 @@ bayard-vpn logs                 # Voir les logs récents
 **Règle Agent** : Si le statut est `DÉCONNECTÉ`, demander le code à l'utilisateur :
 > *« J'ai besoin d'accéder aux services internes Bayard. Pouvez-vous me donner votre code FortiToken actuel (6 chiffres) ? »*
 
-## 2. Contournement WAF CloudFront (*.prionseneglise.fr, préprods)
+## 2. Contournement WAF CloudFront (*.prionseneglise.fr, *.la-croix.com, *.notretemps.com, preprod.*, ...)
 
-Le WAF bloque au niveau HTTP l'IPv6 (renvoie un faux 404), les requêtes `HEAD` et les identifiants `curl` / `HeadlessChrome`.
+Le WAF AWS bloque au niveau HTTP l'IPv6 (renvoie un faux 404), les requêtes `HEAD` et les identifiants `curl` / `HeadlessChrome`.
 
 - **Avec `curl`** : forcer l'IPv4 (`-4`), un User-Agent navigateur et ne jamais utiliser `curl -I` (toujours du `GET`) :
   ```bash
@@ -35,12 +35,15 @@ Le WAF bloque au niveau HTTP l'IPv6 (renvoie un faux 404), les requêtes `HEAD` 
   google-chrome --headless --disable-gpu --user-agent="Mozilla/5.0 (X11; Linux x86_64) Chrome/133.0.0.0" --host-resolver-rules="MAP <domaine> ${IP}" --dump-dom <URL>
   ```
 
-## 3. Review Apps (*.review.bayardev.com)
+## 3. Review Apps & Préprods (*.review.bayardev.com, preprod.*)
 
-Authentification Basic Auth requise. Identifiants stockés dans `~/.config/bayard/review-auth.env` :
+Accessibles **sans VPN** via l'authentification HTTP Basic Auth (`Bayard Restricted Area`). Identifiants stockés dans `~/.config/bayard/review-auth.env` :
 
 ```bash
 source ~/.config/bayard/review-auth.env
-curl -4 -s -L -u "${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}" <URL>
+curl -s -L -u "${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}" <URL>
 ```
-*Via navigateur :* `https://${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}@<domaine>.review.bayardev.com/`
+*Via navigateur :* `https://${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}@<domaine>/`
+
+> [!NOTE]
+> **Plage horaire préprods** : Les environnements de préprod Bayard sont automatiquement éteints la nuit de **20h à 8h** (timeouts ou indisponibilités normaux sur ce créneau).
