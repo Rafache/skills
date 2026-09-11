@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Contrôle simple du VPN Bayard en Split-Tunneling
+
 set -euo pipefail
 
 [ "$(id -u)" -ne 0 ] && exec sudo /home/rafache/scripts/bayard-vpn.sh "$@"
@@ -10,15 +10,15 @@ case "${1:-status}" in
   start)
     OTP="${2:-}"
     [ -z "${OTP}" ] && read -r -p "Code FortiToken (6 chiffres) : " OTP
-    
+
     echo "Connexion au VPN Bayard..."
     pkill openfortivpn 2>/dev/null || true
     openfortivpn -c /etc/openfortivpn/config --otp="${OTP}" --pppd-ifname="${IFACE}" > /var/log/bayard-vpn.log 2>&1 &
-    
+
     sleep 4
     ip route replace 10.0.0.0/8 dev "${IFACE}"
     ip route replace 172.16.0.0/12 dev "${IFACE}"
-    
+
     echo "VPN Bayard connecté."
     ;;
 
@@ -46,7 +46,7 @@ case "${1:-status}" in
       exit 1
     fi
     if [ -z "${DOMAIN}" ] || ! [[ "${DOMAIN}" =~ ^[a-zA-Z0-9][-a-zA-Z0-9.]*\.[a-zA-Z]{2,}$ ]]; then
-      echo "Erreur : seul un nom d'hôte valide est accepté (ex: preprod-pape-france.prionseneglise.fr)." >&2
+      echo "Erreur : seul un nom d'hôte valide est accepté." >&2
       exit 1
     fi
     IPS=$(getent ahostsv4 "${DOMAIN}" | awk '{print $1}' | sort -u)
