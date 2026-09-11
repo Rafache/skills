@@ -1,6 +1,6 @@
 ---
 name: bayard-vpn
-description: Pilotage du VPN d'entreprise Bayard (Fortinet SSL-VPN) en split-tunneling sur l'AuBox pour accéder aux ressources internes (*.bayard.io, *.bayardev.com, preprod.*, 10.0.0.0/8, 172.16.0.0/12).
+description: Accès et tests des sites, préprods et APIs du groupe Bayard (*.bayard.io, *.bayardev.com, *.prionseneglise.fr, preprod.*). Indispensable pour piloter le VPN Fortinet en split-tunneling, router un domaine public via l'IP Bayard, contourner les blocages WAF CloudFront (faux 404) et s'authentifier sur les review apps.
 ---
 
 # Bayard VPN
