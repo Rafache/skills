@@ -18,17 +18,12 @@ case "${1:-status}" in
     sleep 4
     ip route replace 10.0.0.0/8 dev "${IFACE}"
     ip route replace 172.16.0.0/12 dev "${IFACE}"
-    printf "nameserver 10.20.20.97\nnameserver 10.20.21.144\n" > /etc/resolv.conf.head
-    sed -i '/10.20.20.97/d;/10.20.21.144/d' /etc/resolv.conf 2>/dev/null || true
-    sed -i '1s/^/nameserver 10.20.20.97\nnameserver 10.20.21.144\n/' /etc/resolv.conf
     
     echo "VPN Bayard connecté."
     ;;
 
   stop)
     pkill openfortivpn 2>/dev/null || true
-    rm -f /etc/resolv.conf.head
-    sed -i '/10.20.20.97/d;/10.20.21.144/d' /etc/resolv.conf 2>/dev/null || true
     echo "VPN Bayard déconnecté."
     ;;
 
