@@ -22,4 +22,4 @@ Référence : skill `aubox` (`~/.config/agents/skills/aubox/SKILL.md`).
 - **Tooling** : Python via `uv`/`uvx`, Node via `nvm` (`npm`/`npx`, Node 24+). Ne jamais installer de runtimes via `apt`.
 - **Fichiers** : Pas de commande destructive (`rm -rf`, `git reset --hard`, `git clean -fd`).
 - **Réseau** : Jamais de port mappé sur `0.0.0.0` (uniquement `127.0.0.1` ou `192.168.1.10`).
-- **Secrets** : Ne jamais afficher ni committer de clés SSH, tokens ou fichiers `.env`.
+- **Secrets & Fuites** : Ne jamais afficher ni committer de clés SSH, tokens ou fichiers `.env`. Les fichiers de secrets locaux (`~/.config/*/.env`) doivent être en `chmod 600` et sourcés à la volée sans jamais être affichés (`cat`/`echo`). Si un secret apparaît par inadvertance dans un fichier suivi, un diff Git ou une sortie, alerter immédiatement l'utilisateur et neutraliser la fuite avant toute opération distante.
