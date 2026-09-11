@@ -22,7 +22,8 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 - **Réseau** :
   - Interface Ethernet principale : `eno1` (2,5 Gb/s), IP LAN DHCP réservée Freebox (`192.168.1.10`)
   - Interface 2,5 GbE secondaire : `enp3s0` (inactive par défaut)
-  - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement
+  - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement. VPN Bayard en split-tunneling via `bayard-vpn` (skill `bayard-vpn`)
+  - Priorité IPv4 : Activée à l'échelle du système dans `/etc/gai.conf` (`precedence ::ffff:0:0/96 100`)
   - Wake-on-LAN : Actif sur `eno1` via `wol.service` (MAC : `84:47:09:76:d9:3f`), réveillable depuis Freebox OS
 - **NAS Synology DS716+** :
   - IP LAN : `192.168.1.20` (MAC : `00:11:32:55:14:08`, Wake-on-LAN supporté)
@@ -46,10 +47,11 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 │   └── proxy/         # Reverse proxy Nginx Proxy Manager (80, 443, 81)
 ├── scripts/           # Scripts d'administration hôte (maintenance.sh, backup.sh, restore.sh)
 ├── .config/
-│   └── agents/        # Dépôt centralisé des agents et skills (github.com/Rafache/skills.git)
-│       ├── agents/    # Configuration unique (AGENTS.md)
-│       ├── skills/    # Compétences partagées (aubox, media-workflow, ...)
-│       └── scripts/   # Script de synchronisation (sync.sh)
+│   ├── agents/        # Dépôt centralisé des agents et skills (github.com/Rafache/skills.git)
+│   │   ├── agents/    # Configuration unique (AGENTS.md)
+│   │   ├── skills/    # Compétences partagées (aubox, media-workflow, bayard-vpn)
+│   │   └── scripts/   # Script de synchronisation (sync.sh)
+│   └── bayard/        # Secrets et accès Bayard (.env en chmod 600)
 ├── .codex/            # Configuration Codex CLI
 ├── .gemini/           # Configuration Antigravity (AGY)
 ├── .claude/           # Configuration Claude Code
@@ -144,6 +146,7 @@ Avant d'installer un binaire ou une dépendance, vérifier la boîte à outils e
 | **FFmpeg / ffprobe** | `/usr/bin/ffmpeg`, `/usr/bin/ffprobe` | Accélération matérielle Radeon 780M (`radeonsi_drv_video.so`) : `h264_vaapi`, `hevc_vaapi`, `av1_vaapi`. |
 | **aria2c** | `/usr/bin/aria2c` | Téléchargement rapide multi-segments / magnets (utilisé par le skill `media-workflow`). |
 | **Outils système** | `sensors`, `nvme`, `smartctl`, `ethtool`, `vainfo` | Surveillance hardware et vidéo. |
+| **VPN Bayard** | `~/.local/bin/bayard-vpn` | Pilotage Fortinet SSL-VPN en split-tunneling et routage d'hôtes anti-WAF (skill `bayard-vpn`). |
 | **Agents IA** | `codex`, `agy` (Antigravity), `claude` | Outils installés sur l'hôte. |
 
 ---
