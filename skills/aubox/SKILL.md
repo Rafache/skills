@@ -112,6 +112,7 @@ Avant d'installer un binaire ou une dépendance, vérifier la boîte à outils e
 | **Git** | `/usr/bin/git` | Installé et configuré. |
 | **GitHub CLI** | `/usr/bin/gh` | Authentifié sur le compte `Rafache`. Gère `https://github.com/Rafache/skills.git`. |
 | **GitLab CLI** | `/usr/bin/glab` | Authentifié sur **`gitlab.bayard.io`** (`rchemin`). *(Non configuré sur gitlab.com)*. |
+| **Google Workspace CLI** | `gws` | CLI Google Workspace (Drive, Docs, Sheets, Gmail). Authentifié (`alfraid2029@gmail.com`). |
 | **Chrome DevTools MCP** | `npx -y chrome-devtools-mcp@latest` | Pilote Google Chrome Stable (`/usr/bin/google-chrome`) en mode headless. *(Playwright abandonné)*. |
 | **FFmpeg / ffprobe** | `/usr/bin/ffmpeg`, `/usr/bin/ffprobe` | Accélération matérielle Radeon 780M (`radeonsi_drv_video.so`) : `h264_vaapi`, `hevc_vaapi`, `av1_vaapi`. |
 | **aria2c** | `/usr/bin/aria2c` | Téléchargement rapide multi-segments / magnets (utilisé par le skill `media-workflow`). |
