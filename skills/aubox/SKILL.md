@@ -1,12 +1,11 @@
 ---
 name: aubox
-description: Référence technique, opérationnelle et garde-fous de la devbox headless AuBox (architecture, Docker standard, Tailscale, outils, stockage NVMe/NFS, bonnes pratiques et commandes sans rescannage).
+description: Référence technique, opérationnelle et règles de la devbox (architecture, Docker, outils, stockage, bonnes pratiques et commandes). Consulte ce skill avant toute intervention système ou configuration. 
 ---
 
 # AuBox — Guide Opérationnel & Bonnes Pratiques
 
 Ce skill centralise l'architecture, la configuration réelle, la boîte à outils et les garde-fous de l'AuBox.
-**Consulte ce document avant toute intervention système ou configuration afin d'éviter les scans inutiles, les réinstallations d'outils déjà présents et les erreurs destructrices.**
 
 ---
 
@@ -21,8 +20,9 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 - **Utilisateur principal** : `rafache` (avec privilèges sudo, membre du groupe `docker`)
 - **Réseau** :
   - Interface Ethernet principale : `eno1` (2,5 Gb/s), IP LAN DHCP réservée Freebox (`192.168.1.10`)
-  - Interface 2,5 GbE secondaire : `enp3s0` (inactive par défaut)
-  - VPN & Accès distant : VPN Freebox (WireGuard / OpenVPN) pour joindre le LAN en déplacement. VPN Bayard en split-tunneling via `bayard-vpn` (skill `bayard-vpn`)
+  - VPN & Accès distant : 
+    - VPN Freebox (WireGuard) pour joindre le LAN en déplacement.
+    - VPN Bayard (Fortinet) en split-tunneling via `bayard-vpn`.
   - Priorité IPv4 : Activée à l'échelle du système dans `/etc/gai.conf` (`precedence ::ffff:0:0/96 100`)
   - Wake-on-LAN : Actif sur `eno1` via `wol.service` (MAC : `84:47:09:76:d9:3f`), réveillable depuis Freebox OS
 - **NAS Synology DS716+** :
@@ -60,29 +60,14 @@ Ce skill centralise l'architecture, la configuration réelle, la boîte à outil
 └── .local/bin/        # Outils CLI locaux (uv, uvx, codex, agy)
 ```
 
-> **Symlinks IA unifiés** (déployés via `~/.config/agents/scripts/sync.sh`) :
-> - **Configuration commune** :
->   - `~/.codex/AGENTS.md` -> `~/.config/agents/agents/AGENTS.md`
->   - `~/.claude/CLAUDE.md` -> `~/.config/agents/agents/AGENTS.md`
->   - `~/.gemini/GEMINI.md` -> `~/.config/agents/agents/AGENTS.md`
-> - **Skills partagés** :
->   - `~/.codex/skills/*` -> `~/.config/agents/skills/*`
->   - `~/.claude/skills/*` -> `~/.config/agents/skills/*`
->   - `~/.gemini/antigravity-cli/skills/*` -> `~/.config/agents/skills/*`
->
-> Tout skill ou règle ajouté dans `~/.config/agents/` est synchronisé pour tous les agents via `./scripts/sync.sh`.
-
 ---
 
 ## 3. Docker Standard & Bases de Données
 
 ### Configuration Docker
 - Docker tourne en mode **standard** (daemon système `docker.service` géré par systemd, utilisateur `rafache` dans le groupe `docker`).
-- Socket Docker standard : `/var/run/docker.sock` (aucune variable `DOCKER_HOST` requise).
+- Socket Docker standard : `/var/run/docker.sock`.
 - Réseau Docker partagé : **`aubox`** (bridge externe).
-  ```bash
-  docker network ls  # vérifier la présence du réseau 'aubox'
-  ```
 
 ### Stack permanente : `~/services/databases/`
 Contient le `compose.yaml` des 3 bases de données principales :
@@ -99,25 +84,10 @@ Reverse proxy **Nginx Proxy Manager** (`jc21/nginx-proxy-manager:latest`) assura
   - `*.prions.aubox.chem1.fr`, `prions.aubox.chem1.fr` (projets Bayard Prions en Église)
 - **WebSockets / Hot Module Replacement (HMR)** : WebSockets activés sur tous les proxy hosts. Les serveurs de dev Vite (`vite.config.ts`) spécifient `server.hmr.clientPort: 443` pour que le client distant se connecte directement au port 443 du reverse proxy.
 
-### Cartographie des domaines & routage
-
-| Domaine | Type | Cible locale | Description |
-|---|---|---|---|
-| `proxy.aubox.chem1.fr` | Docker (permanent) | `192.168.1.10:81` | Interface d'administration NPM |
-| `nas.aubox.chem1.fr` | Hôte LAN | `192.168.1.20:5000` | Synology DSM |
-| `cki.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5173` | Annuaires ressources DTDD |
-| `kapa6t.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5174` | Capacité / planning |
-| `keskifon.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5175` | KesKiFon |
-| `kestafay.aubox.chem1.fr` | Dev Vite | `192.168.1.10:5176` | KesTaFay |
-| `trading.aubox.chem1.fr` | Dev Wrangler | `192.168.1.10:5177` | CAC Pilot dashboard |
-| `pape-france.prions.aubox.chem1.fr` | Dev Eleventy | `192.168.1.10:8085` | Mini-site Pape France |
-| `api-v2.prions.aubox.chem1.fr` | Docker (projet) | `192.168.1.10:8082` | API Symfony v2 (Nginx + PHP 8.3) |
-| `www.prions.aubox.chem1.fr` | Docker (projet) | `192.168.1.10:8084` | WordPress Prions en Église |
-
 ### Règles de sécurité Docker & Ports
 1. **Liaison IP stricte** :
-   - Les ports des bases ne sont **JAMAIS** bindés sur `0.0.0.0` (accessible sur tous les réseaux).
-   - Ils sont liés à l'IP LAN locale **`192.168.1.10`** (`192.168.1.10:5432`, `192.168.1.10:3306`, `192.168.1.10:6379`), ce qui permet d'y accéder depuis le réseau local ou à distance en se connectant au VPN Freebox.
+   - Les ports des bases ne sont **JAMAIS** bindés sur `0.0.0.0`.
+   - Ils sont liés à l'IP LAN locale **`192.168.1.10`**, ce qui permet d'y accéder depuis le réseau local ou à distance en se connectant au VPN Freebox.
 2. **Communication inter-conteneurs** :
    - Toujours brancher les nouveaux conteneurs sur le réseau externe `aubox`.
    - Utiliser les alias réseau directs : `DB_HOST=postgres`, `DB_HOST=mysql`, `REDIS_HOST=redis`.
@@ -160,7 +130,6 @@ Pour préserver l'intégrité de l'AuBox, **les règles suivantes sont absolues*
    - ❌ `docker compose down -v`
    - ❌ `docker volume rm ...`
    - ❌ `docker system prune --volumes`
-   *(Un simple `docker compose down` arrête les conteneurs sans altérer les données).*
 2. **Suppressions brutales de fichiers** :
    - ❌ `rm -rf /` ou `rm -rf ~/...` sur des dossiers projets ou données.
 3. **Exposition réseau non sécurisée** :
@@ -231,26 +200,3 @@ Les scripts officiels dans `~/scripts/` gèrent les sauvegardes vers `/mnt/ds716
   ~/scripts/restore.sh [/mnt/ds716/backup/aubox/YYYY-MM-DD_HHMMSS]
   ```
   Restaure l'intégralité de l'environnement (clés, dotfiles, services Docker, volumes NPM, bases de données et configs projets) en quelques minutes. Par défaut, cible la sauvegarde `latest`.
-
----
-
-## 7. Diagnostics Rapides (Sans Tout Rescanner)
-
-Pour vérifier la santé du serveur sans exécuter de longs scans :
-
-```bash
-# État des conteneurs
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-# Espace disque hôte et montages Synology
-df -h / /mnt/ds716/*
-
-# Statut des interfaces réseau et adresses IP
-ip -br a
-
-# Températures et ventilation
-sensors
-
-# Accélération matérielle vidéo GPU Radeon
-vainfo --display drm
-```
