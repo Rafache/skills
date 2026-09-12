@@ -13,10 +13,13 @@ agents/
 │   │   └── SKILL.md
 │   ├── bayard-vpn/
 │   │   └── SKILL.md
-│   └── movie-tool/
+│   ├── movie-tool/
+│   │   ├── SKILL.md
+│   │   ├── references/
+│   │   └── scripts/
+│   └── skill-creator/
 │       ├── SKILL.md
-│       ├── references/
-│       └── scripts/
+│       └── references/
 └── scripts/
     ├── stealth-init.js      # Script d'injection furtivité pour navigateur headless
     └── sync.sh              # Synchronisation des symlinks vers les différents outils
