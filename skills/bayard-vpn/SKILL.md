@@ -1,6 +1,6 @@
 ---
 name: bayard-vpn
-description: Accès et tests des sites et APIs du groupe Bayard (*.bayard.io, *.bayardev.com, *.prionseneglise.fr, preprod.*). Piloter le VPN Fortinet en split-tunneling, router un domaine public via l'IP Bayard, contourner les blocages WAF CloudFront et s'authentifier sur les review apps.
+description: Pilotage du VPN Fortinet Bayard, routage d'IP et accès aux réseaux privés ou review apps de Bayard.
 ---
 
 # Bayard VPN

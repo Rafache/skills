@@ -1,6 +1,6 @@
 ---
 name: aubox
-description: Référence technique et règles opérationnelles de l'AuBox (architecture, réseau, Docker, stockage, outils et garde-fous).
+description: Règles d'administration et configuration système d'AuBox (Docker, réseau hôte/NPM, stockage NAS, sauvegardes et runtimes).
 ---
 
 # AuBox — Fiche Technique & Règles Système
