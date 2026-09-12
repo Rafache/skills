@@ -11,10 +11,14 @@ agents/
 ├── skills/                  # Compétences / workflows spécialisés
 │   ├── aubox/
 │   │   └── SKILL.md
-│   └── media-workflow/
+│   ├── bayard-vpn/
+│   │   └── SKILL.md
+│   └── movie-tool/
 │       ├── SKILL.md
+│       ├── references/
 │       └── scripts/
 └── scripts/
+    ├── stealth-init.js      # Script d'injection furtivité pour navigateur headless
     └── sync.sh              # Synchronisation des symlinks vers les différents outils
 ```
 
