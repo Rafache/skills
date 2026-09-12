@@ -10,6 +10,7 @@ for dir in ~/.codex/skills ~/.claude/skills ~/.gemini/antigravity-cli/skills ~/.
   for s in "$ROOT"/skills/*; do
     [ -d "$s" ] && ln -sfn "$s" "$dir/"
   done
+  find "$dir" -xtype l -delete
 done
 
 # Agents globaux
