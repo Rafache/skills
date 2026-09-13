@@ -14,4 +14,4 @@
 
 # Navigation Web & Navigateur Headless
 - **Furtivité navigateur** : Lors de tout appel de pilotage navigateur headless (ex. `navigate_page`), injecter systématiquement l'`initScript` défini dans `~/.config/agents/scripts/stealth-init.js` (masquage `webdriver`, User-Agent propre, WebGL Radeon 780M).
-
+- **Appels HTTP en ligne de commande** : Pour tout appel `curl` vers un service web externe, utiliser un User-Agent réaliste de navigateur via `-A` ou `--user-agent` (par exemple Chromium/Linux), plutôt que le User-Agent par défaut de `curl`.

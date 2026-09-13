@@ -13,6 +13,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
   - LAN hôte : `192.168.1.10` (`eno1`, 2.5 Gb/s, WoL actif). Priorité IPv4 système dans `/etc/gai.conf`.
   - VPN : WireGuard Freebox (accès distant au LAN) et Fortinet Bayard (`bayard-vpn`).
   - Synology DS716+ (`192.168.1.20`) : Montages NFSv4 automount systemd sur `/mnt/ds716/{video,music,backup}`. Réveil WoL via CLI `freebox wol 00:11:32:55:14:08`.
+  - Après l’envoi du WoL, le Synology met environ **1 minute** à démarrer. Attendre ce délai avant de conclure qu’il est inaccessible ; vérifier ensuite la disponibilité réseau et les montages NFS.
 
 ## 2. Cartographie des chemins
 - `~/projets/` : Code source (`bayard/` pro, `perso/` personnel).
