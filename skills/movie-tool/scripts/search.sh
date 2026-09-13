@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Documentation API : https://torrentclaw.com/llms.txt
-
 set -u
 
 SOURCE="all"
@@ -67,6 +65,8 @@ search_magnetz() {
       }
     ] | sort_by(.seeders // 0) | reverse'
 }
+
+# Documentation API : https://torrentclaw.com/llms.txt
 
 search_torrentclaw() {
   local -a headers=(
