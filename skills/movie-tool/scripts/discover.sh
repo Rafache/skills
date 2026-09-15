@@ -5,22 +5,22 @@ set -euo pipefail
 
 MODE="${1:-}"
 shift || true
-[[ "$MODE" == "new" ]] && MODE="recent"
-[[ "$MODE" == "top" ]] && MODE="popular"
 
 usage() {
   cat >&2 <<'HELP'
-Usage: discover.sh recent|popular|trending|upcoming|streaming-top [options]
+Usage: discover.sh <mode> [options]
+
+Modes: recent, popular, trending, upcoming, streaming-top
 
 Options:
   --locale CODE   Locale TorrentClaw (fr par défaut)
   --limit N       Nombre de résultats (10 par défaut)
   --page N        Page de résultats (1 par défaut)
-  --type movie|show|all Filtrer popular/upcoming (les deux par défaut)
-  --period daily|weekly|monthly Période pour trending (daily par défaut)
-  --service netflix|prime|disney|apple|crunchyroll Service pour streaming-top
-  --country CODE  Pays pour streaming-top (US par défaut)
-  --show-type movie|series Type pour streaming-top (movie par défaut)
+  --type movie|show|all Filtre popular/upcoming
+  --period daily|weekly|monthly Période trending (daily par défaut)
+  --service NAME   Service streaming-top (netflix par défaut)
+  --country CODE   Pays streaming-top (US par défaut)
+  --show-type movie|series Type streaming-top (movie par défaut)
   --format table|json (table par défaut)
   -h, --help      Afficher cette aide
 HELP
@@ -54,38 +54,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ "$LOCALE" =~ ^[a-z]{2}([-_][A-Za-z]{2})?$ ]] || usage
-[[ "$LIMIT" =~ ^[1-9][0-9]*$ ]] || usage
-[[ "$PAGE" =~ ^[1-9][0-9]*$ ]] || usage
-[[ -z "$TYPE" || "$TYPE" =~ ^(movie|show|all)$ ]] || usage
-[[ "$PERIOD" =~ ^(daily|weekly|monthly)$ ]] || usage
-[[ "$SERVICE" =~ ^(netflix|prime|disney|apple|crunchyroll)$ ]] || usage
-[[ "$COUNTRY" =~ ^[A-Z]{2}$ ]] || usage
-[[ "$SHOW_TYPE" =~ ^(movie|series)$ ]] || usage
 [[ "$FORMAT" =~ ^(table|json)$ ]] || usage
-[[ "$MODE" != "recent" || -z "$TYPE" ]] || {
-  echo "Erreur: --type n'est pas disponible avec recent." >&2
-  exit 64
-}
-[[ "$MODE" == "popular" || "$MODE" == "upcoming" || -z "$TYPE" ]] || {
-  echo "Erreur: --type est disponible uniquement avec popular ou upcoming." >&2
-  exit 64
-}
-[[ "$MODE" != "trending" || "$TYPE" == "" ]] || {
-  echo "Erreur: --type n'est pas disponible avec trending." >&2
-  exit 64
-}
-[[ "$MODE" != "streaming-top" || -z "$TYPE" ]] || {
-  echo "Erreur: utilisez --show-type avec streaming-top." >&2
-  exit 64
-}
-
-case "$MODE" in
-  recent|popular) [[ "$LIMIT" -le 24 ]] || { echo "Erreur: limit maximum 24 pour $MODE." >&2; exit 64; } ;;
-  trending|upcoming) [[ "$LIMIT" -le 50 ]] || { echo "Erreur: limit maximum 50 pour $MODE." >&2; exit 64; } ;;
-  streaming-top) [[ "$LIMIT" == "10" ]] || { echo "Erreur: streaming-top renvoie un Top 10 fixe." >&2; exit 64; } ;;
-esac
-
 headers=(
   -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36'
   -H 'Accept: application/json'
