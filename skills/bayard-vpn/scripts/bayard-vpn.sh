@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-[ "$(id -u)" -ne 0 ] && exec sudo /home/rafache/scripts/bayard-vpn.sh "$@"
+[ "$(id -u)" -ne 0 ] && exec sudo "$(readlink -f "$0")" "$@"
 
 IFACE="ppp-bayard"
 
