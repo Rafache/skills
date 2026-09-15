@@ -5,6 +5,7 @@ sudo apt update
 sudo apt full-upgrade -y
 sudo apt autoremove -y
 sudo apt autoclean
+sudo systemctl daemon-reexec
 
 docker system prune -f
 
@@ -27,5 +28,10 @@ fi
 
 docker compose -f "$HOME/services/databases/compose.yaml" up -d --remove-orphans >/dev/null 2>&1
 docker compose -f "$HOME/services/proxy/compose.yaml" up -d --remove-orphans >/dev/null 2>&1
+
+if [ -f /var/run/reboot-required ]; then
+    echo "⚠️  Un redémarrage est requis (mise à jour noyau ou libc) :"
+    [ -f /var/run/reboot-required.pkgs ] && cat /var/run/reboot-required.pkgs
+fi
 
 echo "Maintenance terminée : $(date)"
