@@ -17,7 +17,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
 
 ## 2. Cartographie des chemins
 - `~/projets/` : Code source (`bayard/` pro, `perso/` personnel).
-- `~/services/` : Stacks Docker permanentes (`databases/` : PG 18, MySQL 8.4, Redis 8 ; `proxy/` : Nginx Proxy Manager).
+- `~/services/` : Stacks Docker permanentes (`databases/` : PG 18, MySQL 8.4, Redis 8 ; `proxy/` : Nginx Proxy Manager ; `browser/` : Chrome WebRTC n.eko + CDP 9222).
 - `~/.config/agents/` : Dépôt central Git des agents et skills (`skills/` synchronisés via `scripts/sync.sh`).
 - Secrets hôte (`chmod 600`) : `~/.config/bayard/.env`, `~/.config/freebox/.env`, `~/.config/.wrangler/`.
 
@@ -38,10 +38,11 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
 - **Git & Forges** : `gh` authentifié (`Rafache`), `glab` authentifié sur `gitlab.bayard.io` (`rchemin`).
 - **Cloudflare & Google** : `wrangler` (global npm), `gws` (`alfraid2029@gmail.com`).
 - **Multimédia** : `ffmpeg`/`ffprobe` avec VA-API hardware, `aria2c` pour téléchargements multi-sources.
-- **Google Chrome Headless & CAPTCHA** :
-  - Piloté via `chrome-devtools-mcp` (`/usr/bin/google-chrome`).
-  - Profil persistant : `~/.config/google-chrome-mcp/` (cookies et sessions conservés).
-  - Débogage / CAPTCHA / 2FA : Lancer temporairement Chrome avec `--remote-debugging-port=9222 --user-data-dir=/home/rafache/.config/google-chrome-mcp`, tunneliser en SSH (`ssh -L 9222:localhost:9222 rafache@192.168.1.10`), et inspecter via `chrome://inspect` sur le poste client.
+- **Navigateur permanent & Sessions (Chrome WebRTC n.eko & CDP)** :
+  - Conteneur permanent sous `~/services/browser/` (`aubox-browser` basé sur n.eko Google Chrome officiel) avec affichage fenêtré X11, streaming WebRTC 60 fps avec son et accélération matérielle Radeon 780M (`/dev/dri`).
+  - Piloté par les agents via `chrome-devtools-mcp` connecté au CDP local (`http://127.0.0.1:9222`).
+  - Accessible aux utilisateurs via l'interface Web HTTPS `https://browser.aubox.chem1.fr` (NPM, port 6901, WebSockets + WebRTC UDP 52000).
+  - Profil persistant sur volume local `aubox_browser_data` : cookies, sessions, compte Google et tokens partagés en continu entre l'agent et l'humain (contournement natif des anti-bots).
 - **Maintenance & Sauvegarde** (scripts sous `scripts/`, exposés dans le `PATH`) :
   - `aubox-maintenance` : màj apt, docker prune, npm update, relance démons IA.
   - `aubox-backup` : dumps chauds BDD, volumes NPM, configs vers Synology (rotation 8).

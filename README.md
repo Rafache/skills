@@ -21,7 +21,6 @@ agents/
 │       ├── SKILL.md
 │       └── references/
 └── scripts/
-    ├── stealth-init.js      # Script d'injection furtivité pour navigateur headless
     └── sync.sh              # Synchronisation des symlinks vers les différents outils
 ```
 
