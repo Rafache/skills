@@ -43,4 +43,4 @@ curl -s -L -u "${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}" <URL>
 *Via navigateur :* `https://${BAYARD_REVIEW_USER}:${BAYARD_REVIEW_PASSWORD}@<domaine>/`
 
 > [!NOTE]
-> **Extinction nocturne** : Les préprods sont automatiquement éteintes de **20h à 8h**.
+> **Extinction des préprods** : Les préprods sont automatiquement éteintes la nuit (de **20h à 8h**) ainsi que le **week-end** (renvoient une erreur 504 Gateway Timeout).
