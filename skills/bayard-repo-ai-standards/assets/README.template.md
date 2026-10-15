@@ -1,67 +1,94 @@
 # {{NOM_PROJET}}
 
-{{ROLE_ET_PERIMETRE_EN_QUELQUES_PHRASES}}
+{{ROLE_DU_PROJET_EN_UNE_PHRASE}}
 
-<!-- Canevas : adapter à la stack réelle, supprimer les champs et rubriques sans objet, puis ce commentaire.
-Source de référence des commandes, de l'environnement local et des fichiers générés :
-les autres documents y renvoient. Aucun secret, aucun lien vers un fichier inexistant.
+<!-- Canevas : adapter à la stack réelle, supprimer les rubriques sans objet, puis ce commentaire.
+Le README décrit : rôle, structure, démarrage, commandes. Il ne recopie ni les règles de
+CONTRIBUTING, ni les variables du fichier `.dist`, ni les valeurs des fichiers de config.
+Aucun secret, aucun lien vers un fichier inexistant. -->
 
-Structure : arborescence commentée, un ou deux niveaux, seulement les dossiers utiles
-pour s'orienter, une ligne de rôle par dossier, dossiers générés signalés. Exemple :
-  src/           Code PHP (contrôleurs, services, entités)
-  templates/     Gabarits Twig
-  assets/        Sources front (JS, SCSS), compilées par Vite
-  public/build/  Généré par `npm run build`, ne pas modifier
-  tests/         Tests PHPUnit et Playwright
+## Rôle du projet
 
-Exemples : « Données : `make fixtures` charge un jeu anonymisé » ;
-« Services tiers — plateforme de consentement (CMP) : consentement, `assets/consent/`, clé de préprod via le VPN,
-désactivé en local ». Problèmes fréquents : uniquement des blocages réellement rencontrés.
-Autres rubriques possibles : fonctionnement spécifique (cache, hors-ligne…), référencement. -->
+**Consommateurs**
 
-## Structure
+- {{QUI_UTILISE_LE_PROJET_ET_POUR_QUOI}}
 
-{{STACK}}. Le build produit {{ARTEFACT_ET_EMPLACEMENT}}.
+**Fonctionnement**
+
+- {{FLUX_PRINCIPAUX_AUTHENTIFICATION_DONNEES_SERVICES}}
+
+{{RENVOI_VERS_DOCS_SI_UTILE}}
+
+## Stack technique
+
+- {{LANGAGE_FRAMEWORK_VERSIONS}} ;
+- {{STOCKAGE_ET_CACHE}} ;
+- {{OUTILS_QUALITE_ET_TESTS}} ;
+- services externes : {{SERVICES}}.
+
+## Arborescence
+
+<!-- Toutes les entrées versionnées du premier niveau (`git ls-files | cut -d/ -f1 | sort -u`),
+un second niveau seulement quand il aide à s'orienter, et les fichiers locaux utiles marqués
+« (local, non versionné) ». Un commentaire court par ligne : ce que c'est, pas quand le lire. -->
 
 ```text
-{{ARBORESCENCE_COMMENTEE}}
+.
+├── {{DOSSIER}}/                  # {{ROLE}}
+├── {{FICHIER_CONFIG_QUALITE}}    # {{ROLE}}
+├── {{FICHIER}}.dist              # Modèle de configuration
+├── {{FICHIER_LOCAL}}             # Configuration et secrets (local, non versionné)
+├── AGENTS.md                     # Règles des agents IA
+├── CONTRIBUTING.md               # Guide de contribution
+└── README.md                     # Ce fichier
 ```
 
-## Démarrage
+## Démarrer en local
 
-- Prérequis : {{VERSIONS_ET_OUTILS}}.
-- Configuration : {{EXEMPLE_SANS_SECRET_ET_OBTENTION_DES_ACCES}}.
+Prérequis : {{OUTILS_ET_VERSIONS}}.
 
-Depuis {{REPERTOIRE}}, dans {{ENVIRONNEMENT_EXECUTION}} :
+**Fichiers locaux**
+
+- `{{FICHIER_LOCAL}}` : obligatoire, à créer depuis `{{FICHIER}}.dist`. Il est ignoré par Git.
+- `{{FICHIER_OVERRIDE}}` : facultatif, ignoré par Git. Il adapte le poste (port, réseau) sans toucher la configuration commune.
+
+**Installation**
 
 ```sh
-{{COMMANDE_INSTALLATION}}
-{{COMMANDE_DEMARRAGE}}
+{{COMMANDES_D_INSTALLATION_DANS_L_ORDRE}}
 ```
 
-- Site : {{URL_LOCALE}}.
-- Données : {{FIXTURES_OU_DUMP_ANONYMISE_ET_COMMANDE}}.
-- Comptes de test : {{COMPTES_DES_FIXTURES_SANS_SECRET}}.
-- Services locaux : {{SERVICE_URL_ET_ROLE}} (base, cache, recherche, capture des mails…).
+{{URL_LOCALE_ET_DONNEES_DE_TEST}}
 
-## Commandes
+{{ENVIRONNEMENT_D_EXECUTION_DES_COMMANDES}}
 
-- `{{COMMANDE_VALIDATION}}` : {{CONTROLES_EXECUTES}}, identiques à la CI.
-- `{{COMMANDE_BUILD}}` : {{ARTEFACT_PRODUIT}}.
-- `{{AUTRE_COMMANDE}}` : {{ROLE_ET_PRECONDITIONS}}.
+## Configuration
 
-## Services tiers
+La configuration est lue depuis `{{FICHIER_LOCAL}}`. Le fichier [`{{FICHIER}}.dist`]({{FICHIER}}.dist) liste toutes les variables et décrit leur rôle.
 
-| Service | Rôle | Point d'entrée | Condition d'usage | En local |
-|---|---|---|---|---|
-| {{SERVICE}} | {{ROLE}} | `{{CHEMIN_DANS_LE_CODE}}` | {{CONSENTEMENT_CLE_OU_VPN}} | {{ALTERNATIVE_OU_DESACTIVE}} |
+## {{ACCEDER_OU_COMMANDES}}
 
-## Problèmes fréquents
+{{EXEMPLE_D_APPEL_OU_COMMANDES_UTILES_ET_URL_DE_LA_DOC}}
 
-- {{SYMPTOME}} : {{CAUSE_ET_SOLUTION}}.
+## Vérifier une modification
+
+```sh
+{{COMMANDE_VALIDATION}}  # {{CONTROLES_EXECUTES}}
+```
+
+{{DIFFERENCES_ENTRE_LOCAL_ET_CI}}
 
 ## Contribuer
 
-- [CONTRIBUTING.md](CONTRIBUTING.md) : process de la demande à la livraison, environnements distants.
-- [AGENTS.md](AGENTS.md) : instructions pour les agents IA.
-- {{DOCUMENTATION_COMPLEMENTAIRE}}
+Les développeurs peuvent contribuer au projet :
+
+- en ajoutant des fonctionnalités ;
+- en corrigeant des bugs ;
+- en faisant évoluer l'existant (refactorisation, performance, dépendances, documentation).
+
+Chaque contribution part d'un ticket et passe par une Merge Request vers `{{BRANCHE_PRINCIPALE}}`. Elle doit suivre strictement le [guide de contribution](CONTRIBUTING.md), qui fixe :
+
+- la procédure, du ticket au déploiement, et les rôles de chacun ;
+- les règles sur les branches, le code, les vérifications, les commits et les Merge Requests.
+
+Les agents IA suivent en plus [AGENTS.md](AGENTS.md). La CI est décrite dans [`{{FICHIER_CI}}`]({{FICHIER_CI}}).
