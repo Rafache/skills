@@ -14,6 +14,8 @@ Verrou de la plateforme : ce que les consignes écrites ne garantissent pas. Vé
 | Discussions | Settings → Merge requests → Merge checks | *All threads must be resolved* coché |
 | Branche source | Settings → Merge requests → Merge options | *Enable "Delete source branch" option by default* coché |
 | Jobs de contrôle | `.gitlab-ci.yml` | Aucun job de contrôle (tests, lint, secrets) en `allow_failure: true` |
+| Fichiers générés versionnés | `.gitlab-ci.yml` | Un job les reconstruit et échoue s'ils diffèrent de la version committée |
+| Messages de commit | `.gitlab-ci.yml` | Un job vérifie le format des commits de la MR et l'absence de `fixup!` restant |
 
 ## Garde-fous
 
