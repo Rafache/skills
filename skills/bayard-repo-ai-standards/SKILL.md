@@ -24,6 +24,7 @@ Exécuter uniquement le mode demandé. Sans plan validé, commencer par l'audit 
 | :--- | :--- | :--- |
 | **Audit** | Évaluer un dépôt ; produit un diagnostic et un plan arbitré. | [audit.md](references/audit.md) |
 | **Mise en place** | Appliquer les actions retenues d'un plan validé. | [mise-en-place.md](references/mise-en-place.md) |
+| **Vérifier GitLab** | Contrôler en lecture seule protections, fusion et CI. | `scripts/check-gitlab.sh` · [gitlab.md](references/gitlab.md) |
 
 ## Canevas
 

@@ -28,7 +28,7 @@ Appliquer toutes les actions **retenues** du plan, les vérifier, puis remettre 
 
 - une information introuvable qui change le contenu ;
 - un changement qui affaiblirait un contrôle existant (CI, test, baseline) ;
-- un paramètre distant (protection de branche, règles de fusion, droits, variables CI) : ne pas le modifier, fournir la procédure exacte ;
+- un paramètre distant (protection de branche, règles de fusion, droits, variables CI) : ne pas le modifier, fournir le chemin GitLab et la valeur de la [cible](gitlab.md) ;
 - un secret versionné : le signaler, proposer une tâche séparée, ne pas le recopier ;
 - des fichiers générés, données ou secrets à toucher.
 
@@ -40,6 +40,7 @@ Appliquer toutes les actions **retenues** du plan, les vérifier, puis remettre 
 - Charger le fichier `.dist` avec l'outil du projet, ou vérifier sa syntaxe (ex. `php -l`).
 - Lancer la recherche de secrets du projet (ex. Gitleaks) sur les fichiers ajoutés.
 - Relancer la validation du projet si du code, de la configuration ou la CI a changé.
+- Relancer [`check-gitlab.sh`](../scripts/check-gitlab.sh) après un changement de CI ou de réglages GitLab par l'utilisateur.
 - Contrôler le critère de réussite de chaque action ; rejouer les étapes du parcours à blanc concernées.
 
 ## Remettre
