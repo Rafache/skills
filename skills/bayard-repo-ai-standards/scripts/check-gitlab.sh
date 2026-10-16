@@ -103,7 +103,7 @@ if not os.path.exists(ci):
 else:
     job, found = None, []
     for line in open(ci, encoding="utf-8"):
-        m = re.match(r"^([A-Za-z0-9_.-][^:\s]*):\s*$", line)
+        m = re.match(r"^([A-Za-z0-9_.-][^:\s]*):\s*(&\S+)?\s*$", line)
         if m:
             job = m.group(1)
         if re.match(r"^\s+allow_failure:\s*true", line) and job:
