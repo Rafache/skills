@@ -58,8 +58,8 @@ else:
     wanted = sys.argv[1:]
     if not wanted:
         wanted = [project.get("default_branch") or "main"]
-        for b in ("preprod", "prod", "develop"):
-            if api(f"projects/:id/repository/branches/{b}") is not None:
+        for b in ("main", "master", "develop", "dev", "preprod", "prod"):
+            if b not in wanted and api(f"projects/:id/repository/branches/{b}") is not None:
                 wanted.append(b)
     rules = {p["name"]: p for p in protected}
     for b in wanted:
@@ -68,7 +68,9 @@ else:
             report("❌", f"Branche {b} non protégée")
             continue
         push = [a["access_level"] for a in rule.get("push_access_levels", [])]
-        merge = [a["access_level_description"] for a in rule.get("merge_access_levels", [])]
+        # "Allowed to push and merge" also grants merging.
+        merge = [a["access_level_description"] for a in rule.get("merge_access_levels", []) + rule.get("push_access_levels", []) if a.get("access_level") != 0]
+        merge = list(dict.fromkeys(merge))
         if push and all(level == 0 for level in push):
             report("✅", f"{b} : aucun push direct")
         else:
