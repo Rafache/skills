@@ -31,6 +31,10 @@ function flag(msg) { printf "%s:%d: %s\n    %s\n", file, line, msg, text; found 
   if (file ~ /(^|\/)tests?\// && file ~ /\.php$/ && text ~ /markTest(Skipped|Incomplete)/)
     flag("test désactivé")
 
+  if (file ~ /\.[jt]sx?$/ && (file ~ /\.(spec|test)\.[jt]sx?$/ || file ~ /(^|\/)(tests?|__tests__)\//) \
+      && text ~ /(test|it|describe)(\.describe)?\.(skip|only|fixme)\(|(^|[^A-Za-z])[xf](it|describe)\(/)
+    flag("test désactivé ou isolé")
+
   if (file ~ /(^|\/)phpcs\.baseline\.xml$/ && text ~ /<violation/)
     flag("nouvel écart ajouté à la baseline, qui ne doit que rétrécir")
 

@@ -2,12 +2,15 @@
 # Lists assertions removed or changed in tests that already existed before the merge request.
 # A legitimate refactor may do this: the job warns, the reviewer checks each one.
 # Usage: test-changes.sh [base]   (default: $CI_MERGE_REQUEST_DIFF_BASE_SHA)
+# Test directories come from TEST_PATHS (space-separated, default: tests/).
 set -eu
 
 base="${1:-${CI_MERGE_REQUEST_DIFF_BASE_SHA:?base commit required}}"
+test_paths="${TEST_PATHS:-tests/}"
 status=0
 
-for file in $(git diff --name-only --diff-filter=MD "$base" HEAD -- 'tests/'); do
+# shellcheck disable=SC2086
+for file in $(git diff --name-only --diff-filter=MD "$base" HEAD -- $test_paths); do
   git diff --unified=0 --no-color --no-ext-diff "$base" HEAD -- "$file" | awk -v file="$file" '
     /^@@ / { split($2, pos, ","); line = substr(pos[1], 2) - 1; next }
     /^---|^\+\+\+/ { next }
