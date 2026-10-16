@@ -19,7 +19,7 @@ Ex. : « Refonte de la page de connexion »
 
 ## ✅ Tests
 
-<!-- Indique comment vérifier les modifications, les contrôles effectués, leurs résultats et les limites de validation. -->
+<!-- Pour chaque critère d'acceptation, indique le test qui le vérifie (critère → test). Puis les contrôles effectués, leurs résultats et les limites de validation. -->
 
 ## 🚀 Actions à mener
 

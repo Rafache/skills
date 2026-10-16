@@ -68,7 +68,9 @@ Les scripts utiles sont définis dans [`{{MANIFESTE}}`]({{MANIFESTE}}). Ils s'ex
 
 **Tests**
 
+- Avant d'implémenter, lister les cas de test tirés des critères d'acceptation. Avec un agent, il propose la liste et le développeur la valide avant tout code.
 - Ajouter ou adapter les tests de `{{DOSSIER_TESTS}}` pour chaque changement de comportement.
+- Ne jamais modifier une assertion existante pour faire passer un test. Si l'attendu change vraiment, le justifier dans la MR.
 
 **{{DONNEES_BUILD_OU_FICHIERS_PROTEGES}}**
 
@@ -110,6 +112,7 @@ Une modification est terminée quand ces points sont faits. La CI, définie dans
 
 **Passer en Ready**
 
+- Relire les tests avant le code : chaque critère d'acceptation a un test qui vérifie le résultat attendu, pas seulement ce que le code produit.
 - Relire le diff.
 - Nettoyer l'historique de la branche : un commit par changement cohérent, sans commit de correction. La branche de MR peut être réécrite, même si elle est déjà poussée ; jamais `{{BRANCHES_PROTEGEES}}`.
   Méthode conseillée : `git commit --fixup=<commit>`, puis `git rebase -i --autosquash origin/{{BRANCHE_PRINCIPALE}}` et `git push --force-with-lease`.

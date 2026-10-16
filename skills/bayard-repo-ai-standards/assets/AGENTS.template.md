@@ -27,6 +27,8 @@
 - Ne jamais afficher, recopier ou publier le contenu de `{{FICHIERS_DE_SECRETS}}` ni aucun secret.
 - Présenter pour validation tout texte destiné à être envoyé, publié ou enregistré dans un outil distant, sauf si son contenu et sa destination ont déjà été explicitement approuvés.
 - Décrire le résultat final et les choix techniques pertinents dans les contenus persistants (commits, MR, tickets, docs, code), pas le cheminement pour y arriver.
+- Avant de coder, proposer les cas de test tirés des critères d'acceptation et attendre la validation du développeur.
+- Ne jamais modifier ou supprimer une assertion existante pour faire passer un test : signaler l'écart au développeur.
 - Ne jamais contourner une règle, un garde-fou, un test ou un contrôle qualité (désactiver, ignorer, affaiblir). Comprendre pourquoi il bloque et corriger la cause. Si ce n'est pas possible sans contournement, s'arrêter et prévenir le développeur.
 - À la fin d'une tâche, résumer les modifications, les vérifications réellement effectuées et les problèmes non résolus. Ne jamais déclarer un test réussi sans l'avoir exécuté.
 - En cas de doute sur une question produit ou une action hors périmètre, s'arrêter et demander au développeur.
