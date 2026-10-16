@@ -16,6 +16,7 @@ Verrou de la plateforme : ce que les consignes écrites ne garantissent pas. Vé
 | Jobs de contrôle | `.gitlab-ci.yml` | Aucun job de contrôle (tests, lint, secrets) en `allow_failure: true` |
 | Fichiers générés versionnés | `.gitlab-ci.yml` | Un job les reconstruit et échoue s'ils diffèrent de la version committée |
 | Messages de commit | `.gitlab-ci.yml` | Un job vérifie le format des commits de la MR et l'absence de `fixup!` restant |
+| Intégrité du diff | `.gitlab-ci.yml` | Un job bloquant refuse les contournements ajoutés par la MR (annotations d'ignore, test désactivé, baseline qui grossit, règle assouplie) ; canevas : [`diff-integrity.sh`](../assets/diff-integrity.sh) |
 
 ## Garde-fous
 

@@ -28,7 +28,7 @@ Exécuter uniquement le mode demandé. Sans plan validé, commencer par l'audit 
 
 ## Canevas
 
-[README](assets/README.template.md) · [CONTRIBUTING](assets/CONTRIBUTING.template.md) · [AGENTS.md](assets/AGENTS.template.md) · [fichier `.dist`](assets/env.dist.template) · [template de MR](assets/merge-request.template.md) · [skill de projet](assets/SKILL.template.md)
+[README](assets/README.template.md) · [CONTRIBUTING](assets/CONTRIBUTING.template.md) · [AGENTS.md](assets/AGENTS.template.md) · [fichier `.dist`](assets/env.dist.template) · [template de MR](assets/merge-request.template.md) · [script d'intégrité du diff](assets/diff-integrity.sh) · [skill de projet](assets/SKILL.template.md)
 
 ## Garde-fous
 

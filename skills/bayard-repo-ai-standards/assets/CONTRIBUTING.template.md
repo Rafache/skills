@@ -19,6 +19,16 @@ leurs valeurs (pas de « PSR-12 », pas de « niveau 7 »). Listes courtes à l'
 | 6. {{PUBLIER}}. | `{{STATUT}}` |
 | 7. {{DEPLOYER}}. | `{{STATUT}}` |
 
+## Ticket prêt
+
+Avant de créer la branche, vérifier que le ticket contient :
+
+- le besoin, du point de vue de son utilisateur ;
+- des critères d'acceptation testables, cas limites compris ;
+- {{POINTS_PROPRES_AU_PROJET}} (maquette, analytics, accessibilité, contrat d'API, données…), ou « aucun ».
+
+S'il manque un point, le signaler {{AU_ROLE_PRODUIT}} dans le ticket avant de coder.
+
 ## Rôles (matrice RACI)
 
 | Activité | {{ROLE_PRODUIT}} | Développeur | {{EQUIPE_INFRA}} |
@@ -53,6 +63,7 @@ Les scripts utiles sont définis dans [`{{MANIFESTE}}`]({{MANIFESTE}}). Ils s'ex
 
 - Respecter strictement les règles de [`{{CONFIG_STYLE}}`]({{CONFIG_STYLE}}) et de [`{{CONFIG_ANALYSE}}`]({{CONFIG_ANALYSE}}). `{{COMMANDE_FIX}}` corrige le style automatiquement.
 - Écrire les commentaires en anglais, seulement quand ils sont nécessaires : expliquer le pourquoi qui ne se déduit pas du code, pas ce que fait le code.
+- Ne jamais contourner un contrôle ({{ANNOTATIONS_D_IGNORE}}, règle assouplie dans la configuration) : corriger la cause. Un contournement justifié se valide par un humain dans une MR dédiée.
 - {{REGLES_PROPRES_AU_PROJET}}
 
 **Tests**
@@ -68,6 +79,12 @@ Les scripts utiles sont définis dans [`{{MANIFESTE}}`]({{MANIFESTE}}). Ils s'ex
 - Consulter [`{{DOC}}`]({{DOC}}) pour {{CAS}}.
 - Mettre à jour ces documents si le fonctionnement décrit change, le README si l'installation change, et `{{FICHIER}}.dist` si la configuration change.
 - Ajouter tout nouveau fichier ou dossier de premier niveau à l'arborescence du README et, s'il est utile à une tâche, aux instructions d'[AGENTS.md](AGENTS.md).
+
+## Dette connue et pièges
+
+Ne pas reproduire ces points, ni les corriger au passage d'une autre modification.
+
+- {{DETTE_OU_PIEGE_CONFIRME_ET_RENVOI_VERS_LE_DETAIL}}
 
 ## Vérifier
 
