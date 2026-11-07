@@ -28,7 +28,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
 - **Stockage bases** : Exclusivement sur le NVMe local via volumes nommés (`aubox_*_data`). Le NAS sert uniquement aux dumps et backups froids.
 - **Politique `restart`** :
   - `~/services/` (stacks permanentes) : `restart: unless-stopped`.
-  - `~/projets/` (développement) : `restart: "no"`. Ne jamais committer de modification sur les `docker-compose.yml` des projets ; utiliser `compose.override.yml`.
+  - `~/projets/` (développement) : `restart: unless-stopped` dans le `compose.override.yml` local (ignoré par Git) : un projet lancé redémarre après un reboot, un projet arrêté (`stop`/`down`) reste arrêté. Ne jamais committer de modification sur les fichiers compose suivis par Git des projets.
 - **Nginx Proxy Manager** (ports 80, 443, 81 sur `192.168.1.10`) :
   - Wildcards DNS Cloudflare : `*.aubox.chem1.fr` et `*.prions.aubox.chem1.fr`.
   - Vite HMR : spécifier `server.hmr.clientPort: 443`.
