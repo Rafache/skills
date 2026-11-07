@@ -1,143 +1,74 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AuBox - Script de restauration depuis une sauvegarde Synology DS716+
-# Usage : ./restore.sh [/chemin/vers/dossier_backup] [--yes]
-# Défaut : /mnt/ds716/backup/aubox/latest
+# AuBox - Restauration depuis le dépôt restic du Synology
+# Usage : aubox-restore [snapshot]      (défaut : latest)
+#
+# Prérequis sur une machine neuve : Docker, partage NAS monté, et
+# ~/.config/aubox/backup.env recréé avec le RESTIC_PASSWORD conservé hors serveur.
+#
+# Étapes : extraction de l'instantané, puis restauration des volumes aubox_*
+# (seulement s'ils sont absents ou vides), de ~/services, des secrets et des
+# fichiers non versionnés des projets. Les conteneurs ne sont pas démarrés :
+# relancer chaque stack avec `docker compose up -d` dans ~/services/<stack>.
 # ==============================================================================
 
 set -euo pipefail
 
-DEFAULT_BACKUP="/mnt/ds716/backup/aubox/latest"
-SOURCE_DIR="${1:-$DEFAULT_BACKUP}"
-AUTO_CONFIRM=false
+ENV_FILE="${AUBOX_BACKUP_ENV:-${HOME}/.config/aubox/backup.env}"
+# shellcheck source=/dev/null
+source "${ENV_FILE}"
+REPO_DIR="${REPO_DIR_OVERRIDE:-${REPO_DIR}}"
+SNAPSHOT="${1:-latest}"
+RESTIC_IMAGE="restic/restic:0.18.1"
+WORK="${HOME}/aubox-restore-$(date +%Y%m%d_%H%M%S)"
+export RESTIC_PASSWORD
 
-if [[ "${SOURCE_DIR}" == "--yes" || "${SOURCE_DIR}" == "-y" ]]; then
-  SOURCE_DIR="$DEFAULT_BACKUP"
-  AUTO_CONFIRM=true
-fi
+echo "=== Restauration AuBox (instantané : ${SNAPSHOT}) ==="
+mkdir -p "${WORK}"
+docker run --rm -e RESTIC_PASSWORD -e RESTIC_REPOSITORY=/repo \
+  -v "${REPO_DIR}:/repo:ro" -v "${WORK}:/restore" \
+  "${RESTIC_IMAGE}" restore "${SNAPSHOT}" --no-lock --target /restore
+D="${WORK}/data"
+# Fichiers extraits par root : rendre à l'utilisateur ce qui va dans le home
+docker run --rm -v "${WORK}:/w" alpine sh -c \
+  "for d in services secrets projets dumps host host_home; do [ -e /w/data/\$d ] && chown -R $(id -u):$(id -g) /w/data/\$d; done; true"
 
-if [[ "${2:-}" == "--yes" || "${2:-}" == "-y" ]]; then
-  AUTO_CONFIRM=true
-fi
-
-# 1. Vérification du dossier de sauvegarde
-if [ ! -d "${SOURCE_DIR}" ]; then
-  echo "[-] ERREUR: Le dossier de sauvegarde '${SOURCE_DIR}' n'existe pas." >&2
-  exit 1
-fi
-
-SOURCE_REAL_PATH=$(readlink -f "${SOURCE_DIR}")
-echo "=== Restauration AuBox ==="
-echo "Source : ${SOURCE_REAL_PATH}"
-
-if [ -f "${SOURCE_REAL_PATH}/manifest.txt" ]; then
-  echo "--- Détails du manifeste ---"
-  cat "${SOURCE_REAL_PATH}/manifest.txt"
-  echo "----------------------------"
-fi
-
-if [ "$AUTO_CONFIRM" != "true" ]; then
-  read -p "Voulez-vous restaurer cette sauvegarde sur votre machine ? (o/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Oo]$ ]]; then
-    echo "Restauration annulée."
-    exit 0
+# 1. Volumes Docker (jamais écrasés s'ils contiennent déjà des données)
+for src in "${D}"/volumes/*/; do
+  v="$(basename "${src}")"
+  docker volume create "${v}" >/dev/null
+  if [ -n "$(docker run --rm -v "${v}:/v" alpine ls -A /v)" ]; then
+    echo "[!] ${v} n'est pas vide : ignoré (le vider manuellement pour le restaurer)."
+    continue
   fi
+  echo "[+] Volume ${v}"
+  docker run --rm -v "${v}:/v" -v "${src}:/src:ro" alpine cp -a /src/. /v/
+done
+
+# Home Assistant : la copie cohérente de l'historique redevient la base active
+if docker run --rm -v aubox_homeassistant_data:/c alpine test -f /c/.aubox-backup-history.db 2>/dev/null; then
+  docker run --rm -v aubox_homeassistant_data:/c alpine sh -c \
+    '[ -f /c/home-assistant_v2.db ] || cp -a /c/.aubox-backup-history.db /c/home-assistant_v2.db'
 fi
 
-# 2. Restauration des clés, dotfiles et secrets d'authentification
-if [ -f "${SOURCE_REAL_PATH}/credentials_dotfiles.tar.gz" ]; then
-  echo "[+] 1/7 Restauration des clés SSH, Git, Bayard et Wrangler..."
-  tar xzf "${SOURCE_REAL_PATH}/credentials_dotfiles.tar.gz" -C "/home/rafache"
-  chmod 700 /home/rafache/.ssh 2>/dev/null || true
-  chmod 600 /home/rafache/.ssh/id_* 2>/dev/null || true
-  chmod 700 /home/rafache/.config/bayard 2>/dev/null || true
-  chmod 600 /home/rafache/.config/bayard/.env 2>/dev/null || true
-  chmod 700 /home/rafache/.config/freebox 2>/dev/null || true
-  chmod 600 /home/rafache/.config/freebox/.env 2>/dev/null || true
-  chmod -R go-rwx /home/rafache/.config/.wrangler 2>/dev/null || true
+# 2. Configuration, secrets et fichiers non versionnés (sans écraser l'existant)
+echo "[+] ~/services, secrets et fichiers des projets..."
+cp -an "${D}/services" "${HOME}/" 2>/dev/null || true
+[ -d "${D}/secrets" ] && cp -an "${D}/secrets/." "${HOME}/"
+[ -d "${D}/projets" ] && cp -an "${D}/projets/." "${HOME}/"
+
+# 3. Exports de bases : import manuel, selon le service concerné
+if [ -n "$(ls -A "${D}/dumps" 2>/dev/null)" ]; then
+  echo "[i] Exports de bases disponibles dans ${D}/dumps :"
+  ls -1 "${D}/dumps"
+  echo "    PostgreSQL : docker exec -i postgres pg_restore -U dev -C -d postgres < <fichier>.dump"
+  echo "    MySQL      : gunzip -c <fichier>.sql.gz | docker exec -i mysql mysql -uroot -p<mdp> <base>"
 fi
 
-# 3. Restauration des configurations systemd user
-if [ -f "${SOURCE_REAL_PATH}/systemd_user.tar.gz" ]; then
-  echo "[+] 2/7 Restauration des services systemd user..."
-  mkdir -p "/home/rafache/.config"
-  tar xzf "${SOURCE_REAL_PATH}/systemd_user.tar.gz" -C "/home/rafache/.config"
-  loginctl enable-linger rafache 2>/dev/null || true
-  systemctl --user daemon-reload 2>/dev/null || true
+if [ -d "${D}/host" ]; then
+  echo "[i] Configuration de l'hôte (fstab, crontab, unités systemd, paquets apt, ~/.config/agents) :"
+  echo "    ${D}/host et ${D}/host_home : à réappliquer manuellement selon le besoin."
 fi
 
-# 4. Restauration des services permanents (~/services)
-if [ -f "${SOURCE_REAL_PATH}/services.tar.gz" ]; then
-  echo "[+] 3/7 Restauration du dossier ~/services..."
-  tar xzf "${SOURCE_REAL_PATH}/services.tar.gz" -C "/home/rafache"
-fi
-
-# 5. Restauration des volumes Nginx Proxy Manager
-if [ -f "${SOURCE_REAL_PATH}/npm_volumes.tar.gz" ]; then
-  echo "[+] 4/7 Restauration des volumes Nginx Proxy Manager..."
-  docker volume create aubox_proxy_data >/dev/null 2>&1 || true
-  docker volume create aubox_proxy_letsencrypt >/dev/null 2>&1 || true
-  docker run --rm \
-    -v aubox_proxy_data:/data \
-    -v aubox_proxy_letsencrypt:/etc/letsencrypt \
-    -v "${SOURCE_REAL_PATH}:/backup:ro" \
-    alpine sh -c "tar xzf /backup/npm_volumes.tar.gz -C /"
-fi
-
-# 6. Démarrage des stacks permanentes (Bases de données & Proxy)
-echo "[+] 5/7 Démarrage des conteneurs databases et proxy..."
-if [ -d "/home/rafache/services/databases" ]; then
-  (cd /home/rafache/services/databases && docker compose up -d)
-fi
-
-if [ -d "/home/rafache/services/proxy" ]; then
-  (cd /home/rafache/services/proxy && docker compose up -d)
-fi
-
-# 7. Restauration des bases de données
-echo "[+] 6/7 Restauration des bases de données SQL..."
-
-# Attente disponibilité PostgreSQL
-if [ -f "${SOURCE_REAL_PATH}/postgres_all.sql.gz" ]; then
-  echo "    - Attente de PostgreSQL..."
-  for i in {1..30}; do
-    if docker exec postgres pg_isready -U dev >/dev/null 2>&1; then
-      break
-    fi
-    sleep 1
-  done
-  echo "    - Injection du dump PostgreSQL..."
-  gunzip -c "${SOURCE_REAL_PATH}/postgres_all.sql.gz" | docker exec -i postgres psql -U dev dev >/dev/null 2>&1 || true
-fi
-
-# Attente disponibilité MySQL
-if [ -f "${SOURCE_REAL_PATH}/mysql_all.sql.gz" ]; then
-  echo "    - Attente de MySQL..."
-  if [ -f "/home/rafache/services/databases/.env" ]; then
-    MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' /home/rafache/services/databases/.env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
-    for i in {1..30}; do
-      if docker exec mysql mysqladmin ping -uroot -p"${MYSQL_ROOT_PASSWORD}" --silent >/dev/null 2>&1; then
-        break
-      fi
-      sleep 1
-    done
-    echo "    - Injection du dump MySQL..."
-    gunzip -c "${SOURCE_REAL_PATH}/mysql_all.sql.gz" | docker exec -i mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" 2>/dev/null || true
-  fi
-fi
-
-# 8. Restauration des fichiers non versionnés des projets (.env, overrides)
-if [ -f "${SOURCE_REAL_PATH}/projets_untracked.tar.gz" ]; then
-  echo "[+] 7/7 Restauration des .env et compose.override.yml des projets..."
-  tar xzf "${SOURCE_REAL_PATH}/projets_untracked.tar.gz" -C "/home/rafache" 2>/dev/null || true
-fi
-
-echo ""
-echo "=== Restauration terminée avec succès ==="
-echo "Vérifications recommandées :"
-echo "  1. 'docker ps' pour constater l'état des services."
-echo "  2. Si nouvelle machine, appliquez les configurations système conservées dans :"
-echo "     ${SOURCE_REAL_PATH}/system/"
-echo "     - sudo cp ${SOURCE_REAL_PATH}/system/50-rootless-ports.conf /etc/sysctl.d/ && sudo sysctl --system"
-echo "     - sudo cp ${SOURCE_REAL_PATH}/system/wol.service /etc/systemd/system/ && sudo systemctl enable wol"
+echo "=== Terminé. Fichiers extraits : ${WORK} (à supprimer après vérification) ==="
+echo "Démarrer ensuite les stacks : cd ~/services/<stack> && docker compose up -d"

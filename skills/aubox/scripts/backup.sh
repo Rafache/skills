@@ -1,151 +1,142 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AuBox - Script de sauvegarde automatique vers Synology DS716+
-# Cible : /mnt/ds716/backup/aubox/<TIMESTAMP>/
+# AuBox - Sauvegarde des données et de la configuration vers le Synology (restic)
+# Planifiée par cron : mercredi et dimanche à 23:45. Le NAS n'est jamais réveillé :
+# s'il est éteint, une notification est envoyée sur l'iPhone via Home Assistant.
+#
+# Ce qui est sauvegardé (dépôt restic chiffré et dédupliqué) :
+#   - tous les volumes Docker "aubox_*", sauf EXCLUDE_VOLUMES (backup.env) ;
+#   - ~/services (compose, Dockerfile, code) ;
+#   - secrets : ~/.ssh, ~/.gitconfig, ~/.config/{bayard,.wrangler,freebox} ;
+#   - configuration de l'hôte : fstab, gai.conf, wol.service, crontab, paquets apt,
+#     ~/.config/systemd/user, ~/.config/agents ;
+#   - fichiers non versionnés des projets (.env*, compose.override.yml) ;
+#   - exports des bases déclarées par les services (étiquettes ci-dessous).
+#
+# Conventions (rien à modifier ici quand on ajoute un service) :
+#   - nommer ses volumes "aubox_<service>_data" ;
+#   - étiquettes Docker optionnelles sur le conteneur du service :
+#       aubox.backup.pre       commande exécutée dans le conteneur avant la sauvegarde
+#                              (ex. copie cohérente d'une base SQLite dans son volume)
+#       aubox.backup.exclude   motifs restic exclus, séparés par des virgules
+#       aubox.backup.postgres  bases PostgreSQL du service à exporter, séparées par des virgules
+#       aubox.backup.mysql     bases MySQL du service à exporter, séparées par des virgules
+#
+# Configuration : ~/.config/aubox/backup.env (RESTIC_PASSWORD, REPO_DIR, HA_WEBHOOK_URL, EXCLUDE_VOLUMES)
 # ==============================================================================
 
 set -euo pipefail
 
-BACKUP_ROOT="/mnt/ds716/backup/aubox"
-RETENTION_COUNT=8
-TIMESTAMP=$(date +"%Y-%m-%d_%H%M%S")
-BACKUP_DIR="${BACKUP_ROOT}/${TIMESTAMP}"
+ENV_FILE="${AUBOX_BACKUP_ENV:-${HOME}/.config/aubox/backup.env}"
+# shellcheck source=/dev/null
+source "${ENV_FILE}"
+REPO_DIR="${REPO_DIR_OVERRIDE:-${REPO_DIR}}"
+RESTIC_IMAGE="restic/restic:0.18.1"
+STAGING="$(mktemp -d)"
 
-echo "=== Début de la sauvegarde AuBox [${TIMESTAMP}] ==="
+notify() {
+  curl -s -m 10 -X POST -H 'Content-Type: application/json' \
+    -d "$(jq -n --arg t "$1" --arg m "$2" '{title: $t, message: $m}')" \
+    "${HA_WEBHOOK_URL}" >/dev/null || true
+}
+cleanup() { rm -rf "${STAGING}"; }
+on_error() { notify "Sauvegarde AuBox échouée" "Erreur ligne $1. Journal : ~/.local/state/aubox-backup.log"; }
+trap cleanup EXIT
+trap 'on_error $LINENO' ERR
 
-# 1. Vérification de l'accessibilité du NAS et réveil automatique Wake-on-LAN via Freebox si nécessaire
-SYNOLOGY_IP="192.168.1.20"
-SYNOLOGY_MAC="00:11:32:55:14:08"
+restic() {
+  docker run --rm -i --hostname aubox \
+    -e RESTIC_PASSWORD -e RESTIC_REPOSITORY=/repo \
+    -v "${REPO_DIR}:/repo" "$@"
+}
+export RESTIC_PASSWORD
 
-ls "/mnt/ds716/backup" >/dev/null 2>&1 || true
+echo "=== Sauvegarde AuBox [$(date '+%F %T')] ==="
 
-if [ ! -d "/mnt/ds716/backup" ] || [ ! -w "/mnt/ds716/backup" ]; then
-  echo "[*] Le NAS Synology semble endormi ou injoignable. Tentative de réveil Wake-on-LAN via Freebox..."
-  if command -v freebox >/dev/null 2>&1; then
-    freebox wol "${SYNOLOGY_MAC}" || true
-  fi
-  echo "    Attente du démarrage du NAS (jusqu'à 45s)..."
-  for i in {1..45}; do
-    if ping -c 1 -W 1 "${SYNOLOGY_IP}" >/dev/null 2>&1; then
-      ls "/mnt/ds716/backup" >/dev/null 2>&1 || true
-      if [ -w "/mnt/ds716/backup" ]; then
-        echo "[+] NAS réveillé et partage NFS accessible !"
-        break
-      fi
-    fi
-    sleep 1
-  done
-fi
-
-if [ ! -d "/mnt/ds716/backup" ] || [ ! -w "/mnt/ds716/backup" ]; then
-  echo "[-] ERREUR: Le partage /mnt/ds716/backup n'est pas accessible en écriture." >&2
-  echo "    Vérifiez que le NAS Synology est allumé et joignable sur le réseau." >&2
+# 1. Le NAS doit déjà être allumé (pas de réveil). timeout évite un blocage NFS.
+REPO_PARENT="$(dirname "${REPO_DIR}")"
+nas_ok=false
+for _ in 1 2 3; do  # le premier accès déclenche l'automontage NFS, qui peut prendre quelques secondes
+  timeout 15 ls "${REPO_PARENT}" >/dev/null 2>&1 || true
+  if timeout 15 test -w "${REPO_PARENT}"; then nas_ok=true; break; fi
+  sleep 5
+done
+if ! ${nas_ok}; then
+  echo "[-] ${REPO_PARENT} inaccessible : NAS éteint ou partage non monté. Sauvegarde non faite."
+  notify "Sauvegarde AuBox non faite" "Le NAS est éteint ou le partage backup est inaccessible."
   exit 1
 fi
-
-mkdir -p "${BACKUP_DIR}/system"
-
-# 2. Bases de données (Exports logiques à chaud)
-echo "[+] 1/6 Export des bases de données..."
-
-# PostgreSQL
-if docker ps --format '{{.Names}}' | grep -q '^postgres$'; then
-  echo "    - Dump PostgreSQL (toutes les bases)..."
-  docker exec postgres pg_dumpall -U dev | gzip > "${BACKUP_DIR}/postgres_all.sql.gz"
+mkdir -p "${REPO_DIR}"
+if [ ! -f "${REPO_DIR}/config" ]; then
+  echo "[+] Initialisation du dépôt restic..."
+  restic "${RESTIC_IMAGE}" init
 fi
 
-# MySQL
-if docker ps --format '{{.Names}}' | grep -q '^mysql$'; then
-  echo "    - Dump MySQL (toutes les bases)..."
-  if [ -f "/home/rafache/services/databases/.env" ]; then
-    MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' /home/rafache/services/databases/.env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
-    docker exec mysql mysqldump -uroot -p"${MYSQL_ROOT_PASSWORD}" --all-databases --single-transaction 2>/dev/null | gzip > "${BACKUP_DIR}/mysql_all.sql.gz"
-  fi
-fi
-
-# Redis (Snapshot persistant)
-if docker ps --format '{{.Names}}' | grep -q '^redis$'; then
-  echo "    - Sauvegarde Redis..."
-  if [ -f "/home/rafache/services/databases/.env" ]; then
-    REDIS_PASSWORD=$(grep '^REDIS_PASSWORD=' /home/rafache/services/databases/.env | cut -d '=' -f2- | tr -d '"' | tr -d "'")
-    docker exec redis redis-cli -a "${REDIS_PASSWORD}" BGSAVE 2>/dev/null || true
-  fi
-fi
-
-# 3. Nginx Proxy Manager (Base de données SQLite et certificats SSL)
-echo "[+] 2/6 Sauvegarde des volumes Nginx Proxy Manager..."
-if docker volume inspect aubox_proxy_data >/dev/null 2>&1; then
-  docker run --rm \
-    -v aubox_proxy_data:/data:ro \
-    -v aubox_proxy_letsencrypt:/etc/letsencrypt:ro \
-    -v "${BACKUP_DIR}:/backup" \
-    alpine tar czf /backup/npm_volumes.tar.gz -C / data etc/letsencrypt
-fi
-
-# 4. Services permanents (~/services)
-echo "[+] 3/6 Sauvegarde des définitions de services permanents..."
-if [ -d "/home/rafache/services" ]; then
-  tar czf "${BACKUP_DIR}/services.tar.gz" -C "/home/rafache" services
-fi
-
-# 5. Fichiers non versionnés des projets (.env, overrides)
-echo "[+] 4/6 Sauvegarde des configurations locales des projets..."
-if [ -d "/home/rafache/projets" ]; then
-  (
-    cd /home/rafache
-    find projets -type f \( -name ".env*" -o -name "*compose.override.yml" \) 2>/dev/null | \
-      tar czf "${BACKUP_DIR}/projets_untracked.tar.gz" -T -
-  )
-fi
-
-# 6. Configurations systemd utilisateur & système
-echo "[+] 5/6 Sauvegarde des configurations systemd..."
-if [ -d "/home/rafache/.config/systemd/user" ]; then
-  tar czf "${BACKUP_DIR}/systemd_user.tar.gz" -C "/home/rafache/.config" systemd/user
-fi
-
-# Fichiers système hôte
-[ -f "/etc/systemd/system/wol.service" ] && cp -p "/etc/systemd/system/wol.service" "${BACKUP_DIR}/system/"
-[ -f "/etc/sysctl.d/50-rootless-ports.conf" ] && cp -p "/etc/sysctl.d/50-rootless-ports.conf" "${BACKUP_DIR}/system/"
-[ -f "/etc/fstab" ] && cp -p "/etc/fstab" "${BACKUP_DIR}/system/"
-dpkg --get-selections > "${BACKUP_DIR}/system/packages_apt.list"
-
-# 7. Clés SSH, identité Git et secrets CLI (~/.config/bayard, ~/.config/.wrangler, ~/.config/freebox)
-echo "[+] 6/6 Sauvegarde des clés SSH, Git et configurations d'authentification..."
-tar czf "${BACKUP_DIR}/credentials_dotfiles.tar.gz" \
-  -C "/home/rafache" \
-  .ssh \
-  .gitconfig \
-  .config/bayard \
-  .config/.wrangler \
-  .config/freebox 2>/dev/null || true
-
-# Manifeste de sauvegarde
-cat << MANIFEST > "${BACKUP_DIR}/manifest.txt"
-Date: $(date -R)
-Host: $(hostname)
-Kernel: $(uname -r)
-Debian: $(cat /etc/debian_version 2>/dev/null || echo "inconnu")
-User: $(whoami)
-Conteneurs actifs lors du backup:
-$(docker ps --format '- {{.Names}} ({{.Image}})' 2>/dev/null || true)
-MANIFEST
-
-# Mise à jour du lien symbolique 'latest'
-ln -sfn "${TIMESTAMP}" "${BACKUP_ROOT}/latest"
-
-# 8. Rotation des anciennes sauvegardes (conserve les RETENTION_COUNT plus récentes)
-echo "[+] Rotation des sauvegardes (conservation des ${RETENTION_COUNT} dernières)..."
-OLD_BACKUPS=$(ls -dt "${BACKUP_ROOT}"/20* 2>/dev/null | tail -n +$((RETENTION_COUNT + 1)) || true)
-if [ -n "${OLD_BACKUPS}" ]; then
-  echo "${OLD_BACKUPS}" | while read -r old_backup; do
-    echo "    - Suppression ancienne sauvegarde : $(basename "${old_backup}")"
-    rm -r "${old_backup}"
+# 2. Exports cohérents déclarés par les services
+mkdir -p "${STAGING}/dumps" "${STAGING}/projets"
+for c in $(docker ps --filter label=aubox.backup.pre --format '{{.Names}}'); do
+  echo "[+] Export préalable : ${c}"
+  docker exec "${c}" sh -c "$(docker inspect -f '{{index .Config.Labels "aubox.backup.pre"}}' "${c}")"
+done
+for c in $(docker ps --filter label=aubox.backup.postgres --format '{{.Names}}'); do
+  for db in $(docker inspect -f '{{index .Config.Labels "aubox.backup.postgres"}}' "${c}" | tr ',' ' '); do
+    echo "[+] Export PostgreSQL : ${db} (${c})"
+    docker exec postgres pg_dump -U dev -Fc "${db}" > "${STAGING}/dumps/postgres_${db}.dump"
   done
+done
+for c in $(docker ps --filter label=aubox.backup.mysql --format '{{.Names}}'); do
+  for db in $(docker inspect -f '{{index .Config.Labels "aubox.backup.mysql"}}' "${c}" | tr ',' ' '); do
+    echo "[+] Export MySQL : ${db} (${c})"
+    MYSQL_ROOT_PASSWORD=$(grep '^MYSQL_ROOT_PASSWORD=' "${HOME}/services/databases/.env" | cut -d '=' -f2- | tr -d "\"'")
+    docker exec -e MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" mysql mysqldump -uroot --single-transaction "${db}" | gzip > "${STAGING}/dumps/mysql_${db}.sql.gz"
+  done
+done
+
+# 3. Fichiers non versionnés des projets
+if [ -d "${HOME}/projets" ]; then
+  (cd "${HOME}" && find projets -type f \( -name ".env*" -o -name "*compose.override.yml" \) -print0 2>/dev/null \
+    | tar --null -T - -cf - 2>/dev/null) | tar -xf - -C "${STAGING}" || true
 fi
 
-BACKUP_SIZE=$(du -sh "${BACKUP_DIR}" | cut -f1)
-echo "=== Sauvegarde terminée avec succès ==="
-echo "Emplacement : ${BACKUP_DIR}"
-echo "Taille totale : ${BACKUP_SIZE}"
-echo "Lien 'latest' : ${BACKUP_ROOT}/latest"
+# 4. Points de montage : volumes aubox_*, configuration et secrets
+MOUNTS=()
+for v in $(docker volume ls -q --filter name='^aubox_'); do
+  case " ${EXCLUDE_VOLUMES} " in *" ${v} "*) continue ;; esac
+  MOUNTS+=(-v "${v}:/data/volumes/${v}:ro")
+done
+MOUNTS+=(-v "${HOME}/services:/data/services:ro" -v "${STAGING}/dumps:/data/dumps:ro" -v "${STAGING}/projets:/data/projets:ro")
+for p in .ssh .gitconfig .config/bayard .config/.wrangler .config/freebox; do
+  [ -e "${HOME}/${p}" ] && MOUNTS+=(-v "${HOME}/${p}:/data/secrets/${p}:ro")
+done
+# Configuration de l'hôte (référence pour reconstruire la machine)
+mkdir -p "${STAGING}/host"
+crontab -l > "${STAGING}/host/crontab.txt" 2>/dev/null || true
+dpkg --get-selections > "${STAGING}/host/packages_apt.list"
+for f in /etc/fstab /etc/gai.conf /etc/systemd/system/wol.service; do
+  [ -f "${f}" ] && cp -p "${f}" "${STAGING}/host/"
+done
+MOUNTS+=(-v "${STAGING}/host:/data/host:ro")
+for p in .config/systemd/user .config/agents; do
+  [ -d "${HOME}/${p}" ] && MOUNTS+=(-v "${HOME}/${p}:/data/host_home/${p}:ro")
+done
+
+EXCLUDES=()
+for c in $(docker ps --filter label=aubox.backup.exclude --format '{{.Names}}'); do
+  for pat in $(docker inspect -f '{{index .Config.Labels "aubox.backup.exclude"}}' "${c}" | tr ',' ' '); do
+    EXCLUDES+=(--exclude "${pat}")
+  done
+done
+
+# 5. Sauvegarde, rétention, vérification mensuelle
+echo "[+] Sauvegarde restic..."
+restic "${MOUNTS[@]}" "${RESTIC_IMAGE}" backup /data --tag auto "${EXCLUDES[@]}"
+echo "[+] Rétention (4 dernières, 8 semaines, 6 mois)..."
+restic "${RESTIC_IMAGE}" forget --tag auto --keep-last 4 --keep-weekly 8 --keep-monthly 6 --prune
+if [ "$(date +%d)" -le 07 ] && [ "$(date +%u)" -eq 7 ]; then
+  echo "[+] Vérification mensuelle du dépôt..."
+  restic "${RESTIC_IMAGE}" check --read-data-subset=10%
+fi
+
+date -Is > "${HOME}/.local/state/aubox-backup.last-success"  # lu par aubox-health
+echo "=== Sauvegarde terminée [$(date '+%F %T')] ==="
+restic "${RESTIC_IMAGE}" snapshots --latest 1 --compact
