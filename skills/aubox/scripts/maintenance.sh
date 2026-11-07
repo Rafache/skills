@@ -10,11 +10,15 @@
 # - Ménage : conteneurs, réseaux et images orphelins, cache de build de plus de 30 jours,
 #   volumes orphelins sans nom (identifiant brut de 64 caractères) ; les volumes nommés
 #   (aubox_*, etc.) ne sont jamais supprimés automatiquement.
-# - Notification iPhone (webhook HA) seulement si une image a été mise à jour,
-#   si un redémarrage est requis ou en cas d'erreur.
+# - CLI : npm global (claude, wrangler, gws), uv, codex, agy, twg via leurs propres commandes.
+# - Versions figées : signale une nouvelle version de Home Assistant ou de matterjs-server
+#   (mise à jour manuelle : changer le tag dans ~/services/homeassistant/compose.yaml).
+# - Notification iPhone (webhook HA) seulement si une image a été mise à jour, si une
+#   nouvelle version figée existe, si un redémarrage est requis ou en cas d'erreur.
 # ==============================================================================
 
 set -uo pipefail
+export PATH="${HOME}/.local/bin:${PATH}"  # cron n'inclut pas ~/.local/bin (uv, codex, agy, twg)
 
 ENV_FILE="${AUBOX_BACKUP_ENV:-${HOME}/.config/aubox/backup.env}"
 # shellcheck source=/dev/null
@@ -63,6 +67,23 @@ export NVM_DIR="${HOME}/.nvm"
 [ -s "${NVM_DIR}/nvm.sh" ] && . "${NVM_DIR}/nvm.sh"
 npm update -g >/dev/null 2>&1 || ERRORS+=("npm")
 
+# 4bis. CLI autonomes (chacun via sa propre commande de mise à jour)
+command -v uv >/dev/null && { uv self update -q </dev/null >/dev/null 2>&1 || ERRORS+=("uv"); }
+command -v codex >/dev/null && { codex update </dev/null >/dev/null 2>&1 || ERRORS+=("codex"); }
+command -v agy >/dev/null && { agy update </dev/null >/dev/null 2>&1 || ERRORS+=("agy"); }
+command -v twg >/dev/null && { twg upgrade </dev/null >/dev/null 2>&1 || ERRORS+=("twg"); }
+
+# 4ter. Versions figées : nouvelle version disponible ?
+NEWVERS=()
+UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/124.0 Safari/537.36"
+HA_COMPOSE="${HOME}/services/homeassistant/compose.yaml"
+for pair in "home-assistant/core|ghcr.io/home-assistant/home-assistant" "matter-js/matterjs-server|ghcr.io/matter-js/matterjs-server"; do
+  repo="${pair%%|*}"; img="${pair##*|}"
+  cur="$(docker compose -f "${HA_COMPOSE}" config --images 2>/dev/null | grep "^${img}:" | cut -d: -f2)"
+  new="$(curl -s -m 15 -A "${UA}" "https://api.github.com/repos/${repo}/releases/latest" | jq -r '.tag_name // empty' | sed 's/^v//')"
+  [ -n "${cur}" ] && [ -n "${new}" ] && [ "${cur}" != "${new}" ] && NEWVERS+=("${img##*/} ${new} (actuel ${cur})")
+done
+
 # 5. Démons IA
 if systemctl --user is-failed codex-remote-control.service >/dev/null 2>&1; then
   echo "[+] Réparation de Codex Remote Control..."
@@ -73,6 +94,7 @@ fi
 # 6. Bilan
 MSG=""
 [ ${#UPDATED[@]} -gt 0 ] && MSG+="Mis à jour : ${UPDATED[*]}. "
+[ ${#NEWVERS[@]} -gt 0 ] && MSG+="Nouvelle version disponible : $(IFS=,; echo "${NEWVERS[*]}" | sed 's/,/, /g'). "
 [ -f /var/run/reboot-required ] && MSG+="Redémarrage requis. "
 [ ${#ERRORS[@]} -gt 0 ] && MSG+="Erreurs : ${ERRORS[*]}."
 echo "[i] ${MSG:-Rien à signaler.}"
