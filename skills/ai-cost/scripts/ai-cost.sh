@@ -85,8 +85,8 @@ if [ -n "$UNTIL" ]; then
   codex_args+=("--until" "$UNTIL")
 fi
 
-claude_json=$(npx ccusage "${claude_args[@]}" 2>/dev/null | sed -n '/^{/,$p' || echo "{}")
-codex_json=$(npx ccusage "${codex_args[@]}" 2>/dev/null | sed -n '/^{/,$p' || echo "{}")
+claude_json=$(npx -y ccusage "${claude_args[@]}" 2>/dev/null | sed -n '/^{/,$p' || echo "{}")
+codex_json=$(npx -y ccusage "${codex_args[@]}" 2>/dev/null | sed -n '/^{/,$p' || echo "{}")
 
 # 4. Traitement et consolidation jq
 jq -r -n \
