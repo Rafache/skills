@@ -7,22 +7,23 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
 
 ## 1. Identité & Matériel
 - **Hôte** : Mini PC CHUWI AuBox, Debian 13 (Trixie) amd64, kernel 6.12, 100% headless.
-- **Hardware** : AMD Ryzen 7 8745HS (8C/16T), Radeon 780M (VA-API : `radeonsi_drv_video.so`), 16 Go DDR5, SSD NVMe 512 Go sur `/`.
+- **Hardware** : AMD Ryzen 7 8745HS (8C/16T), Radeon 780M (VA-API : `radeonsi_drv_video.so`), 32 Go DDR5, SSD NVMe 512 Go sur `/`.
 - **Utilisateur** : `rafache` (sudo, groupe `docker`).
 - **Réseau** :
   - LAN hôte : `192.168.1.10` (`eno1`, 2.5 Gb/s, WoL actif). Priorité IPv4 système dans `/etc/gai.conf`.
   - VPN : WireGuard Freebox (accès distant au LAN) et Fortinet Bayard (`bayard-vpn`).
-  - Synology DS716+ (`192.168.1.20`) : Montages NFSv4 automount systemd sur `/mnt/ds716/{video,music,backup}`. Réveil WoL via CLI `freebox wol 00:11:32:55:14:08`.
+  - Synology DS716+ (`192.168.1.20`) : Montages NFSv4 automount systemd sur `/mnt/ds716/{video,music,backup}`. Réveil WoL via CLI `freebox wol 00:11:32:55:14:08` (skill `freebox`).
   - Après l’envoi du WoL, le Synology met environ **1 minute** à démarrer. Attendre ce délai avant de conclure qu’il est inaccessible ; vérifier ensuite la disponibilité réseau et les montages NFS.
 
 ## 2. Cartographie des chemins
 - `~/projets/` : Code source (`bayard/` pro, `perso/` personnel).
-- `~/services/` : Stacks Docker permanentes (`databases/` : PG 18, MySQL 8.4, Redis 8 ; `proxy/` : Nginx Proxy Manager ; `browser/` : Chrome WebRTC n.eko + CDP 9222).
+- `~/services/` : Stacks Docker permanentes (`databases/` : PG 18, MySQL 8.4, Redis 8 ; `proxy/` : Nginx Proxy Manager ; `browser/` : Chrome WebRTC n.eko + CDP 9222 ; `homeassistant/` : Home Assistant + matterjs-server, réseau hôte ; `adguard/` : DNS AdGuard Home). Un fichier `compose.yaml` par stack.
 - `~/.config/agents/` : Dépôt central Git des agents et skills (`skills/` synchronisés via `scripts/sync.sh`).
-- Secrets hôte (`chmod 600`) : `~/.config/bayard/.env`, `~/.config/freebox/.env`, `~/.config/.wrangler/`.
+- Secrets hôte (`chmod 600`) : `~/.config/bayard/.env`, `~/.config/freebox/.env`, `~/.config/.wrangler/`, `~/.config/aubox/backup.env` (mot de passe restic, webhook HA). Secrets des stacks dans le `.env` de chaque stack, jamais en clair dans `compose.yaml`.
 
 ## 3. Règles Docker
-- **Bridge réseau** : Tout conteneur doit être rattaché au réseau externe `aubox`. Résolution interne par nom de service (`postgres`, `mysql`, `redis`).
+- **Bridge réseau** : Tout conteneur doit être rattaché au réseau externe `aubox`. Résolution interne par nom de service (`postgres`, `mysql`, `redis`). Exception : `homeassistant` et `matter-server` en `network_mode: host` (mDNS, Matter/Thread).
+- **Versions d'images** : services critiques figés sur un tag précis (Home Assistant, matterjs-server) et mis à jour en changeant le tag ; les autres suivent `latest`/majeure et sont mis à jour par `aubox-maintenance`.
 - **Liaison des ports** : Toujours binder sur l'IP LAN `192.168.1.10:PORT:PORT` ou `127.0.0.1`, **jamais `0.0.0.0`**.
 - **Stockage bases** : Exclusivement sur le NVMe local via volumes nommés (`aubox_*_data`). Le NAS sert uniquement aux dumps et backups froids.
 - **Politique `restart`** :
@@ -44,9 +45,14 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
   - Accessible aux utilisateurs via l'interface Web HTTPS `https://browser.aubox.chem1.fr` (NPM, port 6901, WebSockets + WebRTC UDP 52000).
   - Profil persistant sur volume local `aubox_browser_data` : cookies, sessions, compte Google et tokens partagés en continu entre l'agent et l'humain (contournement natif des anti-bots).
 - **Maintenance & Sauvegarde** (scripts sous `scripts/`, exposés dans le `PATH`) :
-  - `aubox-maintenance` : màj apt, docker prune, npm update, relance démons IA.
-  - `aubox-backup` : dumps chauds BDD, volumes NPM, configs vers Synology (rotation 8).
-  - `aubox-restore [<dir>]` : restauration complète depuis le NAS (`latest` par défaut).
+  - Planification (crontab de `rafache`) : `aubox-backup` mercredi et dimanche 23:45 ; `aubox-health` tous les jours 09:00 ; `aubox-maintenance` 1er dimanche du mois 04:00. Journaux : `~/.local/state/aubox-*.log`. Notifications iPhone via le webhook HA de `backup.env` (si HA est en panne, rien ne part).
+  - Correctifs de sécurité apt : automatiques chaque jour via `unattended-upgrades`.
+  - `aubox-maintenance` : met à jour les images non figées de chaque stack `~/services` (ne recrée que ce qui a changé), ménage Docker (dont cache de build > 30 j, jamais les volumes), npm global, démons IA. apt complet uniquement en lancement manuel. Notifie si mise à jour, redémarrage requis ou erreur.
+  - `aubox-health` : silencieux si tout va bien ; notifie si un conteneur de `~/services` est arrêté/unhealthy, disque > 85 %, unité systemd en échec, ou dernière sauvegarde réussie > 5 jours.
+  - `aubox-backup` : sauvegarde restic (chiffrée, dédupliquée) vers `/mnt/ds716/backup/aubox-restic`. Cron mercredi et dimanche 23:45 ; ne réveille pas le NAS, notifie l'iPhone via un webhook HA en cas d'échec. Journal : `~/.local/state/aubox-backup.log`. Config et mot de passe : `~/.config/aubox/backup.env`.
+    - Sauvegarde automatiquement tout volume `aubox_*` (sauf `EXCLUDE_VOLUMES`), `~/services`, les secrets et les `.env`/overrides des projets.
+    - Nouveau service : nommer ses volumes `aubox_<service>_data` ; étiquettes optionnelles `aubox.backup.pre` (export cohérent), `aubox.backup.exclude`, `aubox.backup.postgres` / `aubox.backup.mysql` (bases du service à exporter). Les bases des projets ne sont pas sauvegardées.
+  - `aubox-restore [<snapshot>]` : restauration depuis le dépôt restic (`latest` par défaut), sans écraser les volumes non vides.
 
 ## 5. Garde-fous & Commandes Interdites
 - ❌ **Docker destructif** : Ne jamais exécuter `docker compose down -v`, `docker volume rm` ou `docker system prune --volumes`.
