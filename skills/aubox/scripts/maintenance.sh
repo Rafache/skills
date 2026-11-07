@@ -14,7 +14,7 @@
 # - CLI : npm global (claude, wrangler, gws), uv, codex, agy, twg via leurs propres commandes.
 # - Versions figées : signale une nouvelle version de Home Assistant ou de matterjs-server
 #   (mise à jour manuelle : changer le tag dans ~/services/homeassistant/compose.yaml).
-# - Notification iPhone (webhook HA) seulement si une image a été mise à jour, si une
+# - Notification iPhone (ntfy, lib-notify.sh) seulement si une image a été mise à jour, si une
 #   nouvelle version figée existe, si un redémarrage est requis ou en cas d'erreur.
 # ==============================================================================
 
@@ -24,12 +24,8 @@ export PATH="${HOME}/.local/bin:${PATH}"  # cron n'inclut pas ~/.local/bin (uv, 
 ENV_FILE="${AUBOX_BACKUP_ENV:-${HOME}/.config/aubox/backup.env}"
 # shellcheck source=/dev/null
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}"
-notify() {
-  [ -n "${HA_WEBHOOK_URL:-}" ] || return 0
-  curl -s -m 10 -X POST -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg t "$1" --arg m "$2" '{title: $t, message: $m}')" \
-    "${HA_WEBHOOK_URL}" >/dev/null || true
-}
+# shellcheck source=lib-notify.sh
+source "$(dirname "$(readlink -f "$0")")/lib-notify.sh"
 ERRORS=()
 UPDATED=()
 
@@ -106,6 +102,6 @@ MSG=""
 [ -f /var/run/reboot-required ] && MSG+="Redémarrage requis. "
 [ ${#ERRORS[@]} -gt 0 ] && MSG+="Erreurs : ${ERRORS[*]}."
 echo "[i] ${MSG:-Rien à signaler.}"
-[ -n "${MSG}" ] && notify "Maintenance AuBox" "${MSG}"
+[ -n "${MSG}" ] && aubox_notify "Maintenance AuBox" "${MSG}" "$([ ${#ERRORS[@]} -gt 0 ] && echo 4 || echo 3)"
 echo "=== Maintenance terminée [$(date '+%F %T')] ==="
 [ ${#ERRORS[@]} -eq 0 ]

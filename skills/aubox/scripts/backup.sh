@@ -2,7 +2,7 @@
 # ==============================================================================
 # AuBox - Sauvegarde des données et de la configuration vers le Synology (restic)
 # Planifiée par cron : mercredi et dimanche à 23:45. Le NAS n'est jamais réveillé :
-# s'il est éteint, une notification est envoyée sur l'iPhone via Home Assistant.
+# s'il est éteint, une notification est envoyée sur l'iPhone via ntfy (lib-notify.sh).
 #
 # Ce qui est sauvegardé (dépôt restic chiffré et dédupliqué) :
 #   - tous les volumes Docker "aubox_*", sauf EXCLUDE_VOLUMES (backup.env) ;
@@ -22,7 +22,7 @@
 #       aubox.backup.postgres  bases PostgreSQL du service à exporter, séparées par des virgules
 #       aubox.backup.mysql     bases MySQL du service à exporter, séparées par des virgules
 #
-# Configuration : ~/.config/aubox/backup.env (RESTIC_PASSWORD, REPO_DIR, HA_WEBHOOK_URL, EXCLUDE_VOLUMES)
+# Configuration : ~/.config/aubox/backup.env (RESTIC_PASSWORD, REPO_DIR, EXCLUDE_VOLUMES, NTFY_TOPIC)
 # ==============================================================================
 
 set -euo pipefail
@@ -34,13 +34,10 @@ REPO_DIR="${REPO_DIR_OVERRIDE:-${REPO_DIR}}"
 RESTIC_IMAGE="restic/restic:0.18.1"
 STAGING="$(mktemp -d)"
 
-notify() {
-  curl -s -m 10 -X POST -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg t "$1" --arg m "$2" '{title: $t, message: $m}')" \
-    "${HA_WEBHOOK_URL}" >/dev/null || true
-}
+# shellcheck source=lib-notify.sh
+source "$(dirname "$(readlink -f "$0")")/lib-notify.sh"
 cleanup() { rm -rf "${STAGING}"; }
-on_error() { notify "Sauvegarde AuBox échouée" "Erreur ligne $1. Journal : ~/.local/state/aubox-backup.log"; }
+on_error() { aubox_notify "Sauvegarde AuBox échouée" "Erreur ligne $1. Journal : ~/.local/state/aubox-backup.log" 4; }
 trap cleanup EXIT
 trap 'on_error $LINENO' ERR
 
@@ -63,7 +60,7 @@ for _ in 1 2 3; do  # le premier accès déclenche l'automontage NFS, qui peut p
 done
 if ! ${nas_ok}; then
   echo "[-] ${REPO_PARENT} inaccessible : NAS éteint ou partage non monté. Sauvegarde non faite."
-  notify "Sauvegarde AuBox non faite" "Le NAS est éteint ou le partage backup est inaccessible."
+  aubox_notify "Sauvegarde AuBox non faite" "Le NAS est éteint ou le partage backup est inaccessible." 4
   exit 1
 fi
 mkdir -p "${REPO_DIR}"

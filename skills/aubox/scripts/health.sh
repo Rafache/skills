@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # AuBox - Contrôle de santé quotidien (cron : 09:00), lançable à la main.
-# Silencieux si tout va bien ; sinon une seule notification iPhone (webhook HA) listant :
+# Silencieux si tout va bien ; sinon une seule notification iPhone (ntfy) listant :
 #   - conteneur d'une stack ~/services arrêté ou unhealthy ;
 #   - disque / au-delà de 85 % ;
 #   - unité systemd en échec (système ou utilisateur) ;
 #   - dernière sauvegarde réussie de plus de 5 jours.
-# Limite : si Home Assistant est en panne, la notification ne part pas (voir le journal).
+# Limite : si l'AuBox elle-même est hors service, rien ne part (il faudrait un veilleur externe).
 # ==============================================================================
 
 set -uo pipefail
@@ -14,6 +14,8 @@ set -uo pipefail
 ENV_FILE="${AUBOX_BACKUP_ENV:-${HOME}/.config/aubox/backup.env}"
 # shellcheck source=/dev/null
 [ -f "${ENV_FILE}" ] && source "${ENV_FILE}"
+# shellcheck source=lib-notify.sh
+source "$(dirname "$(readlink -f "$0")")/lib-notify.sh"
 LAST_BACKUP="${HOME}/.local/state/aubox-backup.last-success"
 PROBLEMS=()
 
@@ -49,9 +51,5 @@ if [ ${#PROBLEMS[@]} -eq 0 ]; then
 fi
 MSG="$(printf '%s ; ' "${PROBLEMS[@]}")"
 echo "$(date '+%F %T') PROBLÈMES : ${MSG}"
-if [ -n "${HA_WEBHOOK_URL:-}" ]; then
-  curl -s -m 10 -X POST -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg m "${MSG%; }" '{title: "Santé AuBox", message: $m}')" \
-    "${HA_WEBHOOK_URL}" >/dev/null || echo "Notification impossible (Home Assistant injoignable ?)"
-fi
+aubox_notify "Santé AuBox" "${MSG%; }" 4
 exit 1
