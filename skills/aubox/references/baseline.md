@@ -77,7 +77,13 @@ Aucune bibliothèque Python n'est installée au niveau utilisateur (ni pip, ni o
 | `/etc/docker/daemon.json` | Rotation des journaux des conteneurs (10 Mo × 3) |
 | `~/.config/systemd/user/antigravity-cli-daemon.service.d/override.conf` | Attente du DNS au démarrage d'Antigravity |
 
-## 6. Volontairement absent
+## 6. Réseau (Freebox)
+
+- Aucune redirection de port, DMZ désactivée, UPnP désactivé : rien n'est exposé à Internet.
+- `*.aubox.chem1.fr` pointe vers l'IP locale `192.168.1.10` (accès LAN ou VPN WireGuard Freebox uniquement).
+- Vérification : `freebox raw GET /fw/redir/`, `freebox raw GET /upnpigd/config/`.
+
+## 7. Volontairement absent
 
 Ne pas réinstaller sans besoin explicite :
 
