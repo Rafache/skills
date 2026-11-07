@@ -7,7 +7,9 @@
 # - Docker : met à jour les images non figées de chaque stack ~/services/*/compose.yaml
 #   et ne recrée que les conteneurs dont l'image a changé. Les images figées (tag précis,
 #   ex. Home Assistant) ne bougent pas : on les met à jour en changeant le tag.
-# - Ménage : conteneurs, réseaux et images orphelins, cache de build de plus de 30 jours.
+# - Ménage : conteneurs, réseaux et images orphelins, cache de build de plus de 30 jours,
+#   volumes orphelins sans nom (identifiant brut de 64 caractères) ; les volumes nommés
+#   (aubox_*, etc.) ne sont jamais supprimés automatiquement.
 # - Notification iPhone (webhook HA) seulement si une image a été mise à jour,
 #   si un redémarrage est requis ou en cas d'erreur.
 # ==============================================================================
@@ -49,9 +51,11 @@ for f in "${HOME}"/services/*/compose.yaml; do
   fi
 done
 
-# 3. Ménage Docker (jamais de volumes)
+# 3. Ménage Docker
 docker system prune -f >/dev/null || ERRORS+=("docker prune")
 docker builder prune -f --filter until=720h >/dev/null || ERRORS+=("builder prune")
+# Volumes orphelins sans nom uniquement (docker volume prune ignore ceux non marqués anonymes)
+docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$' | xargs -r docker volume rm >/dev/null || ERRORS+=("volumes orphelins")
 
 # 4. Paquets npm globaux
 export NVM_DIR="${HOME}/.nvm"

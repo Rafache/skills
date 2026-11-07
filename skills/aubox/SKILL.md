@@ -47,7 +47,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
 - **Maintenance & Sauvegarde** (scripts sous `scripts/`, exposés dans le `PATH`) :
   - Planification (crontab de `rafache`) : `aubox-backup` mercredi et dimanche 23:45 ; `aubox-health` tous les jours 09:00 ; `aubox-maintenance` 1er dimanche du mois 04:00. Journaux : `~/.local/state/aubox-*.log`. Notifications iPhone via le webhook HA de `backup.env` (si HA est en panne, rien ne part).
   - Correctifs de sécurité apt : automatiques chaque jour via `unattended-upgrades`.
-  - `aubox-maintenance` : met à jour les images non figées de chaque stack `~/services` (ne recrée que ce qui a changé), ménage Docker (dont cache de build > 30 j, jamais les volumes), npm global, démons IA. apt complet uniquement en lancement manuel. Notifie si mise à jour, redémarrage requis ou erreur.
+  - `aubox-maintenance` : met à jour les images non figées de chaque stack `~/services` (ne recrée que ce qui a changé), ménage Docker (dont cache de build > 30 j et volumes orphelins sans nom ; jamais les volumes nommés), npm global, démons IA. apt complet uniquement en lancement manuel. Notifie si mise à jour, redémarrage requis ou erreur.
   - `aubox-health` : silencieux si tout va bien ; notifie si un conteneur de `~/services` est arrêté/unhealthy, disque > 85 %, unité systemd en échec, ou dernière sauvegarde réussie > 5 jours.
   - `aubox-backup` : sauvegarde restic (chiffrée, dédupliquée) vers `/mnt/ds716/backup/aubox-restic`. Cron mercredi et dimanche 23:45 ; ne réveille pas le NAS, notifie l'iPhone via un webhook HA en cas d'échec. Journal : `~/.local/state/aubox-backup.log`. Config et mot de passe : `~/.config/aubox/backup.env`.
     - Sauvegarde automatiquement tout volume `aubox_*` (sauf `EXCLUDE_VOLUMES`), `~/services`, les secrets et les `.env`/overrides des projets.
@@ -55,7 +55,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
   - `aubox-restore [<snapshot>]` : restauration depuis le dépôt restic (`latest` par défaut), sans écraser les volumes non vides.
 
 ## 5. Garde-fous & Commandes Interdites
-- ❌ **Docker destructif** : Ne jamais exécuter `docker compose down -v`, `docker volume rm` ou `docker system prune --volumes`.
+- ❌ **Docker destructif** : Ne jamais exécuter `docker compose down -v`, `docker system prune --volumes` ni `docker volume rm` sur un volume nommé sans confirmation. Seule exception automatique : `aubox-maintenance` supprime les volumes orphelins sans nom.
 - ❌ **Suppression brutale** : Pas de `rm -rf` sur `~/projets`, `~/services` ou les volumes sans confirmation.
 - ❌ **Exposition publique** : Aucun port sensible ou BDD sur `0.0.0.0`.
 - ❌ **Git destructif** : Pas de `reset --hard`, `clean -fd` ou `push --force` sur les branches principales.
