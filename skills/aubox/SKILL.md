@@ -1,6 +1,6 @@
 ---
 name: aubox
-description: Règles d'administration et configuration système d'AuBox (Docker, réseau hôte/NPM, stockage NAS, sauvegardes et runtimes).
+description: Règles d'administration et configuration système d'AuBox (Docker, réseau hôte/NPM, stockage NAS, runtimes). À utiliser pour toute intervention sur l'AuBox ou ses services (~/services, Home Assistant, Matter, proxy, AdGuard, bases) - ajout ou mise à jour d'un service, sauvegarde, restauration, maintenance, mises à jour, santé, notifications, ménage Docker.
 ---
 
 # AuBox — Fiche Technique & Règles Système
