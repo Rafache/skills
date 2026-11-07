@@ -62,13 +62,18 @@ docker builder prune -f --filter until=720h >/dev/null || ERRORS+=("builder prun
 # Images sans aucun conteneur (même arrêté) et créées il y a plus de 30 jours
 docker image prune -a -f --filter until=720h >/dev/null || ERRORS+=("image prune")
 # Volumes orphelins sans nom uniquement (docker volume prune ignore ceux non marqués anonymes)
-docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$' | xargs -r docker volume rm >/dev/null || ERRORS+=("volumes orphelins")
+{ docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$' || true; } | xargs -r docker volume rm >/dev/null || ERRORS+=("volumes orphelins")
 
 # 4. Paquets npm globaux
 export NVM_DIR="${HOME}/.nvm"
 # shellcheck source=/dev/null
 [ -s "${NVM_DIR}/nvm.sh" ] && . "${NVM_DIR}/nvm.sh"
 npm update -g >/dev/null 2>&1 || ERRORS+=("npm")
+# npm update peut laisser Claude Code sans son binaire natif ("claude native binary not installed")
+CLAUDE_PKG="$(npm root -g 2>/dev/null)/@anthropic-ai/claude-code"
+if [ -f "${CLAUDE_PKG}/install.cjs" ] && ! claude --version >/dev/null 2>&1; then
+  (cd "${CLAUDE_PKG}" && node install.cjs >/dev/null 2>&1) || ERRORS+=("claude")
+fi
 
 # 4bis. CLI autonomes (chacun via sa propre commande de mise à jour)
 command -v uv >/dev/null && { uv self update -q </dev/null >/dev/null 2>&1 || ERRORS+=("uv"); }
