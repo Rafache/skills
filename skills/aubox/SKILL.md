@@ -55,7 +55,11 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
     - Nouveau service : nommer ses volumes `aubox_<service>_data` ; étiquettes optionnelles `aubox.backup.pre` (export cohérent), `aubox.backup.exclude`, `aubox.backup.postgres` / `aubox.backup.mysql` (bases du service à exporter). Les bases des projets ne sont pas sauvegardées.
   - `aubox-restore [<snapshot>]` : restauration depuis le dépôt restic (`latest` par défaut), sans écraser les volumes non vides.
 
-## 5. Garde-fous & Commandes Interdites
+## 5. Référence de l'installation propre
+- [references/baseline.md](references/baseline.md) liste ce qui doit être installé (paquets apt, outils hors apt, stacks, services, cron, config système) avec le rôle de chaque élément, et ce qui est volontairement absent.
+- Toute installation ou suppression durable doit y être reportée. Pour un ménage, comparer l'état réel à cette liste.
+
+## 6. Garde-fous & Commandes Interdites
 - ❌ **Docker destructif** : Ne jamais exécuter `docker compose down -v`, `docker system prune --volumes` ni `docker volume rm` sur un volume nommé sans confirmation. Seule exception automatique : `aubox-maintenance` supprime les volumes orphelins sans nom.
 - ❌ **Suppression brutale** : Pas de `rm -rf` sur `~/projets`, `~/services` ou les volumes sans confirmation.
 - ❌ **Exposition publique** : Aucun port sensible ou BDD sur `0.0.0.0`.
