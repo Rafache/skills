@@ -56,7 +56,7 @@ description: Règles d'administration et configuration système d'AuBox (Docker,
   - `aubox-restore [<snapshot>]` : restauration depuis le dépôt restic (`latest` par défaut), sans écraser les volumes non vides.
 
 ## 5. Référence de l'installation propre
-- [references/baseline.md](references/baseline.md) liste ce qui doit être installé (paquets apt, outils hors apt, stacks, services, cron, config système) avec le rôle de chaque élément, et ce qui est volontairement absent.
+- [references/baseline.md](references/baseline.md) liste ce qui doit être installé (paquets apt, outils hors apt, stacks, services, cron, config système, réseau) avec le rôle de chaque élément.
 - Toute installation ou suppression durable doit y être reportée. Pour un ménage, comparer l'état réel à cette liste.
 
 ## 6. Garde-fous & Commandes Interdites
